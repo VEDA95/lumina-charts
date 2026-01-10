@@ -1,0 +1,51 @@
+{
+  "name": "@lumina-charts/svelte",
+  "version": "0.0.1",
+  "description": "Svelte wrapper for Lumina Charts",
+  "author": "Lumina Charts",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "svelte": "./dist/index.js",
+  "exports": {
+    ".": {
+      "svelte": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lumina-charts/core": "workspace:*"
+  },
+  "devDependencies": {},
+  "peerDependencies": {
+    "svelte": ">=4.0.0"
+  },
+  "keywords": [
+    "charts",
+    "svelte",
+    "lumina-charts",
+    "webgl"
+  ]
+}

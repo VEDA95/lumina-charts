@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lumina Charts - Demo</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body class="bg-gray-100 p-5 font-sans">
+    <h1 class="mb-3 text-2xl font-bold text-gray-800">Lumina Charts - Demo</h1>
+
+    <div class="mb-4 flex gap-2">
+      <button
+        id="btn-scatter"
+        class="cursor-pointer rounded-md bg-primary px-4 py-2 text-sm text-white hover:bg-primary-hover"
+      >
+        Scatter Chart
+      </button>
+      <button
+        id="btn-line"
+        class="cursor-pointer rounded-md bg-gray-400 px-4 py-2 text-sm text-white hover:bg-gray-500"
+      >
+        Line Chart
+      </button>
+    </div>
+
+    <div class="mb-5 flex flex-wrap gap-2">
+      <button
+        id="btn-1k"
+        class="cursor-pointer rounded-md bg-primary px-4 py-2 text-sm text-white hover:bg-primary-hover"
+      >
+        1K Points
+      </button>
+      <button
+        id="btn-10k"
+        class="cursor-pointer rounded-md bg-primary px-4 py-2 text-sm text-white hover:bg-primary-hover"
+      >
+        10K Points
+      </button>
+      <button
+        id="btn-100k"
+        class="cursor-pointer rounded-md bg-primary px-4 py-2 text-sm text-white hover:bg-primary-hover"
+      >
+        100K Points
+      </button>
+      <button
+        id="btn-1m"
+        class="cursor-pointer rounded-md bg-primary px-4 py-2 text-sm text-white hover:bg-primary-hover"
+      >
+        1M Points
+      </button>
+      <button
+        id="btn-reset"
+        class="cursor-pointer rounded-md bg-gray-600 px-4 py-2 text-sm text-white hover:bg-gray-700"
+      >
+        Reset Zoom
+      </button>
+      <button
+        id="btn-clear"
+        class="cursor-pointer rounded-md bg-gray-600 px-4 py-2 text-sm text-white hover:bg-gray-700"
+      >
+        Clear Selection
+      </button>
+    </div>
+
+    <div
+      id="chart"
+      class="h-[500px] w-full max-w-[900px] overflow-hidden rounded-lg bg-white shadow-md"
+    ></div>
+
+    <div class="mt-5 max-w-[900px] rounded-lg bg-white p-4">
+      <h3 class="mb-3 text-lg font-semibold">Statistics</h3>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+        <div class="rounded bg-gray-100 p-3">
+          <div class="text-xs text-gray-500">Points</div>
+          <div id="stat-points" class="text-xl font-semibold text-gray-800">0</div>
+        </div>
+        <div class="rounded bg-gray-100 p-3">
+          <div class="text-xs text-gray-500">Render Time</div>
+          <div id="stat-render" class="text-xl font-semibold text-gray-800">0 ms</div>
+        </div>
+        <div class="rounded bg-gray-100 p-3">
+          <div class="text-xs text-gray-500">Hovered</div>
+          <div id="stat-hovered" class="text-xl font-semibold text-gray-800">-</div>
+        </div>
+        <div class="rounded bg-gray-100 p-3">
+          <div class="text-xs text-gray-500">Selected</div>
+          <div id="stat-selected" class="text-xl font-semibold text-gray-800">0</div>
+        </div>
+        <div class="rounded bg-gray-100 p-3">
+          <div class="text-xs text-gray-500">Zoom Level</div>
+          <div id="stat-zoom" class="text-xl font-semibold text-gray-800">1.0x</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-5 max-w-[900px] rounded-lg bg-blue-50 p-4 text-sm text-blue-900">
+      <h3 class="mb-2 font-semibold">Interactions</h3>
+      <ul class="ml-5 list-disc space-y-1">
+        <li><strong>Pan:</strong> Click and drag to pan the chart</li>
+        <li><strong>Zoom:</strong> Scroll wheel to zoom in/out (centered on cursor)</li>
+        <li><strong>Hover:</strong> Move cursor over points to see tooltips</li>
+        <li><strong>Select:</strong> Click on a point to select it</li>
+      </ul>
+    </div>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

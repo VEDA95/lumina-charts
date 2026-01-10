@@ -1,0 +1,56 @@
+{
+  "name": "@lumina-charts/core",
+  "version": "0.0.1",
+  "description": "Core WebGL rendering engine for Lumina Charts",
+  "author": "Lumina Charts",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./styles": "./dist/styles.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "d3-array": "^3.2.0",
+    "d3-axis": "^3.0.0",
+    "d3-scale": "^4.0.0",
+    "d3-selection": "^3.0.0",
+    "rbush": "^4.0.0",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@types/d3-array": "^3.2.0",
+    "@types/d3-axis": "^3.0.0",
+    "@types/d3-scale": "^4.0.0",
+    "@types/d3-selection": "^3.0.0",
+    "@types/rbush": "^3.0.0"
+  },
+  "keywords": [
+    "charts",
+    "webgl",
+    "visualization",
+    "data-visualization",
+    "typescript"
+  ]
+}

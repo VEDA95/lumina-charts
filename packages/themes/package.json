@@ -1,0 +1,46 @@
+{
+  "name": "@lumina-charts/themes",
+  "version": "0.0.1",
+  "description": "Pre-built themes for Lumina Charts",
+  "author": "Lumina Charts",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./base.css": "./src/base.css",
+    "./themes.css": "./src/themes.css"
+  },
+  "files": [
+    "dist",
+    "src/*.css"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "keywords": [
+    "charts",
+    "themes",
+    "css",
+    "lumina-charts"
+  ]
+}

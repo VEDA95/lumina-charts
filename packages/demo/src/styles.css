@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #4a4a8a;
+  --color-primary-hover: #5a5a9a;
+
+  --font-sans: system-ui, -apple-system, sans-serif;
+}
+
+/* Lumina Charts CSS variables */
+:root {
+  --lumina-font-family: var(--font-sans);
+  --lumina-axis-color: #666;
+  --lumina-axis-line-color: #e5e5e5;
+  --lumina-axis-text-color: #666;
+  --lumina-axis-label-color: #333;
+  --lumina-tooltip-bg: rgba(0, 0, 0, 0.85);
+  --lumina-tooltip-color: #fff;
+}
