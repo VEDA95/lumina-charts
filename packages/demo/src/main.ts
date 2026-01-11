@@ -25,6 +25,48 @@ const statRender = document.getElementById('stat-render')!;
 const statHovered = document.getElementById('stat-hovered')!;
 const statSelected = document.getElementById('stat-selected')!;
 const statZoom = document.getElementById('stat-zoom')!;
+const statFps = document.getElementById('stat-fps')!;
+const statMemory = document.getElementById('stat-memory')!;
+const statLod = document.getElementById('stat-lod')!;
+const statVisible = document.getElementById('stat-visible')!;
+const lodToggle = document.getElementById('lod-toggle') as HTMLInputElement;
+
+// FPS tracking
+let frameCount = 0;
+let lastFpsUpdate = performance.now();
+let currentFps = 0;
+
+function updateFps(): void {
+  frameCount++;
+  const now = performance.now();
+  const delta = now - lastFpsUpdate;
+
+  if (delta >= 500) { // Update every 500ms
+    currentFps = Math.round((frameCount * 1000) / delta);
+    statFps.textContent = `${currentFps}`;
+    statFps.style.color = currentFps >= 55 ? '#22c55e' : currentFps >= 30 ? '#eab308' : '#ef4444';
+    frameCount = 0;
+    lastFpsUpdate = now;
+  }
+
+  requestAnimationFrame(updateFps);
+}
+
+// Memory tracking (Chrome only)
+function updateMemory(): void {
+  if ((performance as any).memory) {
+    const memory = (performance as any).memory;
+    const usedMB = Math.round(memory.usedJSHeapSize / 1024 / 1024);
+    const totalMB = Math.round(memory.jsHeapSizeLimit / 1024 / 1024);
+    statMemory.textContent = `${usedMB} MB`;
+  } else {
+    statMemory.textContent = 'N/A';
+  }
+}
+
+// Start FPS monitoring
+requestAnimationFrame(updateFps);
+setInterval(updateMemory, 1000);
 
 // Current chart type and instance
 let currentChartType: 'scatter' | 'line' = 'scatter';
@@ -107,6 +149,16 @@ function createChart(type: 'scatter' | 'line'): void {
       const zoom = zoomHandler.getZoomLevel();
       statZoom.textContent = `${Math.max(zoom.x, zoom.y).toFixed(1)}x`;
     }
+    updateLODStats();
+  });
+
+  chart.on('pan', () => {
+    updateLODStats();
+  });
+
+  // Update LOD stats after every render (catches all changes)
+  chart.on('render', () => {
+    updateLODStats();
   });
 
   // Update button styles
@@ -220,24 +272,49 @@ function generateLineData(count: number): Series[] {
 function loadData(count: number): void {
   if (!chart) return;
 
-  console.log(`Generating ${count.toLocaleString()} points...`);
+  console.log(`\n========== Loading ${count.toLocaleString()} points (${currentChartType}) ==========`);
 
+  // Data generation
   const startGen = performance.now();
   const series = currentChartType === 'scatter' ? generateScatterData(count) : generateLineData(count);
   const genTime = performance.now() - startGen;
   console.log(`Data generation: ${genTime.toFixed(1)}ms`);
 
+  // Calculate data size
+  let totalPoints = 0;
+  for (const s of series) {
+    totalPoints += s.data.length;
+  }
+  const dataSizeBytes = totalPoints * 2 * 8; // x,y as float64
+  console.log(`Data size: ~${(dataSizeBytes / 1024 / 1024).toFixed(2)} MB (${totalPoints.toLocaleString()} points)`);
+
+  // Render
   const startRender = performance.now();
   chart.setData(series);
   const renderTime = performance.now() - startRender;
 
+  // Update stats
   currentPointCount = count;
   statPoints.textContent = count.toLocaleString();
   statRender.textContent = `${renderTime.toFixed(1)} ms`;
   statSelected.textContent = '0';
   statZoom.textContent = '1.0x';
 
-  console.log(`Render time: ${renderTime.toFixed(1)}ms`);
+  // Log results
+  console.log(`Initial render: ${renderTime.toFixed(1)}ms`);
+  console.log(`Points per ms: ${Math.round(totalPoints / renderTime).toLocaleString()}`);
+
+  // Memory after load
+  if ((performance as any).memory) {
+    const memory = (performance as any).memory;
+    const usedMB = Math.round(memory.usedJSHeapSize / 1024 / 1024);
+    console.log(`Memory usage: ${usedMB} MB`);
+  }
+
+  console.log(`==========================================================\n`);
+
+  // Update LOD stats after data load
+  updateLODStats();
 }
 
 // Chart type toggle handlers
@@ -272,6 +349,70 @@ btnClear.addEventListener('click', () => {
   if (selectionHandler) {
     selectionHandler.clearSelection();
   }
+});
+
+// Update LOD statistics display
+function updateLODStats(): void {
+  if (!chart) {
+    statLod.textContent = '-';
+    statVisible.textContent = '0';
+    return;
+  }
+
+  const chartWithLOD = chart as ScatterChart | LineChart;
+  const lodManager = chart.getLODManager();
+  let visiblePoints = currentPointCount;
+  let displayLodLevel = 0;
+
+  if (currentChartType === 'scatter') {
+    const levels = lodManager.getLevels('main');
+    if (levels && levels.length > 0) {
+      const lodLevel = chartWithLOD.getLODLevel('main');
+      displayLodLevel = lodLevel;
+      if (levels[lodLevel]) {
+        visiblePoints = levels[lodLevel].pointCount;
+      }
+    }
+  } else {
+    // Line chart has multiple series - sum up visible points
+    let total = 0;
+    let maxLevel = 0;
+    for (const seriesId of ['series-1', 'series-2', 'series-3']) {
+      const levels = lodManager.getLevels(seriesId);
+      const level = chartWithLOD.getLODLevel(seriesId);
+      if (levels && levels.length > 0 && levels[level]) {
+        total += levels[level].pointCount;
+        maxLevel = Math.max(maxLevel, level);
+      }
+    }
+    if (total > 0) {
+      visiblePoints = total;
+      displayLodLevel = maxLevel;
+    }
+  }
+
+  statLod.textContent = displayLodLevel.toString();
+  statVisible.textContent = visiblePoints.toLocaleString();
+
+  // Update LOD stat color based on level
+  if (displayLodLevel === 0) {
+    statLod.style.color = '#22c55e'; // Green - full resolution
+  } else if (displayLodLevel <= 2) {
+    statLod.style.color = '#eab308'; // Yellow - light decimation
+  } else {
+    statLod.style.color = '#ef4444'; // Red - heavy decimation
+  }
+}
+
+// LOD toggle handler
+lodToggle.addEventListener('change', () => {
+  if (!chart) return;
+
+  const chartWithLOD = chart as ScatterChart | LineChart;
+  chartWithLOD.setLODEnabled(lodToggle.checked);
+  updateLODStats();
+
+  console.log(`LOD ${lodToggle.checked ? 'enabled' : 'disabled'}`);
 });
 
 // Initialize

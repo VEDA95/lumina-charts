@@ -41,7 +41,7 @@ export type {
 // Data processing
 export { DataProcessor } from './data/DataProcessor.js';
 export { SpatialIndex } from './data/SpatialIndex.js';
-export { LODManager, douglasPeuckerDecimate } from './data/LODManager.js';
+export { LODManager, douglasPeuckerDecimate, gridBasedDecimate } from './data/LODManager.js';
 export type {
   ProcessPointOptions,
   ProcessLineOptions,

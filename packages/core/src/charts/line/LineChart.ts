@@ -8,6 +8,7 @@ import type {
   AxisConfig,
   GridConfig,
   Series,
+  DataPoint,
   RGBAColor,
   DataDomain,
 } from '../../types/index.js';
@@ -15,6 +16,7 @@ import { BaseChart, type BaseChartConfig } from '../BaseChart.js';
 import { LineRenderPass } from './LineRenderPass.js';
 import { GridRenderPass } from '../GridRenderPass.js';
 import { AxisRenderer } from '../../axes/AxisRenderer.js';
+import type { LODLevel } from '../../data/LODManager.js';
 
 /**
  * Line chart specific options
@@ -67,6 +69,10 @@ export class LineChart extends BaseChart {
   private axisRenderer: AxisRenderer | null = null;
   private gridRenderPass: GridRenderPass | null = null;
   private lineRenderPass!: LineRenderPass;
+
+  // LOD tracking
+  private currentLODLevels: Map<string, number> = new Map();
+  private lodEnabled: boolean = true;
 
   constructor(config: LineChartConfig) {
     const options = config.options ?? {};
@@ -148,6 +154,41 @@ export class LineChart extends BaseChart {
    * Called when data is updated
    */
   protected onDataUpdate(series: Series[]): void {
+    this.currentLODLevels.clear();
+
+    // Generate LOD levels for each series
+    for (const s of series) {
+      if (this.lodEnabled && s.data.length > 0) {
+        // Sort data by x for proper LOD
+        const sortedData = [...s.data].sort((a, b) => a.x - b.x);
+
+        // Create Float32Array for LOD generation
+        const xyData = new Float32Array(sortedData.length * 2);
+        for (let i = 0; i < sortedData.length; i++) {
+          xyData[i * 2] = sortedData[i].x;
+          xyData[i * 2 + 1] = sortedData[i].y;
+        }
+
+        this.lodManager.generateLODLevels(s.id, xyData, sortedData.length);
+        this.currentLODLevels.set(s.id, 0);
+      }
+    }
+
+    // Upload data to GPU
+    this.uploadDataToGPU(series);
+
+    // Update axis renderer
+    if (this.axisRenderer) {
+      this.axisRenderer.setDomain(this.state.domain);
+      this.axisRenderer.render();
+      this.syncGridTicks();
+    }
+  }
+
+  /**
+   * Upload current LOD level data to GPU
+   */
+  private uploadDataToGPU(series: Series[]): void {
     // Clear existing series data
     this.lineRenderPass.clearAllSeries();
 
@@ -164,8 +205,11 @@ export class LineChart extends BaseChart {
       // Get line width
       const lineWidth = s.style?.lineWidth ?? this.lineOptions.lineWidth ?? 2;
 
+      // Get data at current LOD level
+      const lodData = this.getSeriesDataAtLOD(s);
+
       // Sort data by x value for proper line rendering
-      const sortedData = [...s.data].sort((a, b) => a.x - b.x);
+      const sortedData = [...lodData].sort((a, b) => a.x - b.x);
 
       // Build position array
       const positions = new Float32Array(sortedData.length * 2);
@@ -183,13 +227,50 @@ export class LineChart extends BaseChart {
         lineWidth,
       });
     }
+  }
 
-    // Update axis renderer
-    if (this.axisRenderer) {
-      this.axisRenderer.setDomain(this.state.domain);
-      this.axisRenderer.render();
-      this.syncGridTicks();
+  /**
+   * Get series data at current LOD level
+   */
+  private getSeriesDataAtLOD(series: Series): DataPoint[] {
+    if (!this.lodEnabled || !this.lodManager.hasLevels(series.id)) {
+      return series.data;
     }
+
+    // Select appropriate LOD level based on viewport and domain
+    const { width } = this.state.viewport;
+    const domain = this.state.domain;
+    const initialDomain = this.getInitialDomain();
+
+    if (!initialDomain || width === 0) {
+      return series.data;
+    }
+
+    const lodLevel = this.lodManager.selectLODLevel(
+      series.id,
+      width,
+      [domain.x[0], domain.x[1]],
+      [initialDomain.x[0], initialDomain.x[1]]
+    );
+
+    // Track current level
+    this.currentLODLevels.set(series.id, lodLevel.level);
+
+    // If at level 0 (full resolution), return original data
+    if (lodLevel.level === 0) {
+      return series.data;
+    }
+
+    // Convert decimated Float32Array to DataPoint array
+    const decimatedData: DataPoint[] = [];
+    for (let i = 0; i < lodLevel.pointCount; i++) {
+      decimatedData.push({
+        x: lodLevel.data[i * 2],
+        y: lodLevel.data[i * 2 + 1],
+      });
+    }
+
+    return decimatedData;
   }
 
   /**
@@ -222,6 +303,49 @@ export class LineChart extends BaseChart {
       this.axisRenderer.render();
     }
     this.syncGridTicks();
+
+    // Check if LOD level needs to change
+    if (this.lodEnabled) {
+      this.checkLODLevelChange();
+    }
+  }
+
+  /**
+   * Check if LOD level needs to change and update if so
+   */
+  private checkLODLevelChange(): void {
+    const { width } = this.state.viewport;
+    const domain = this.state.domain;
+    const initialDomain = this.getInitialDomain();
+
+    if (!initialDomain || width === 0 || this.series.length === 0) {
+      return;
+    }
+
+    let needsUpdate = false;
+
+    for (const s of this.series) {
+      if (!this.lodManager.hasLevels(s.id)) continue;
+
+      const lodLevel = this.lodManager.selectLODLevel(
+        s.id,
+        width,
+        [domain.x[0], domain.x[1]],
+        [initialDomain.x[0], initialDomain.x[1]]
+      );
+
+      const currentLevel = this.currentLODLevels.get(s.id) ?? 0;
+
+      if (lodLevel.level !== currentLevel) {
+        console.log(`LOD level change: ${currentLevel} -> ${lodLevel.level} (${lodLevel.pointCount} points)`);
+        needsUpdate = true;
+        break;
+      }
+    }
+
+    if (needsUpdate) {
+      this.uploadDataToGPU(this.series);
+    }
   }
 
   /**
@@ -314,12 +438,68 @@ export class LineChart extends BaseChart {
   }
 
   /**
+   * Enable or disable LOD (Level of Detail)
+   */
+  setLODEnabled(enabled: boolean): void {
+    if (this.lodEnabled === enabled) return;
+
+    this.lodEnabled = enabled;
+
+    // Re-process data with new LOD setting
+    if (this.series.length > 0) {
+      if (enabled) {
+        // Re-generate LOD levels
+        for (const s of this.series) {
+          if (s.data.length > 0) {
+            const sortedData = [...s.data].sort((a, b) => a.x - b.x);
+            const xyData = new Float32Array(sortedData.length * 2);
+            for (let i = 0; i < sortedData.length; i++) {
+              xyData[i * 2] = sortedData[i].x;
+              xyData[i * 2 + 1] = sortedData[i].y;
+            }
+            this.lodManager.generateLODLevels(s.id, xyData, sortedData.length);
+            this.currentLODLevels.set(s.id, 0);
+          }
+        }
+      } else {
+        // Clear LOD data
+        this.lodManager.clear();
+        this.currentLODLevels.clear();
+      }
+
+      this.uploadDataToGPU(this.series);
+    }
+  }
+
+  /**
+   * Check if LOD is enabled
+   */
+  isLODEnabled(): boolean {
+    return this.lodEnabled;
+  }
+
+  /**
+   * Get current LOD level for a series
+   */
+  getLODLevel(seriesId: string): number {
+    return this.currentLODLevels.get(seriesId) ?? 0;
+  }
+
+  /**
+   * Get LOD memory usage statistics
+   */
+  getLODMemoryUsage(): { seriesCount: number; totalBytes: number; levelCounts: number[] } {
+    return this.lodManager.getMemoryUsage();
+  }
+
+  /**
    * Clean up resources
    */
   dispose(): void {
     if (this.axisRenderer) {
       this.axisRenderer.dispose();
     }
+    this.currentLODLevels.clear();
     super.dispose();
   }
 }
