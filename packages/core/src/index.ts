@@ -9,6 +9,7 @@ export { BaseChart, ScatterChart, LineChart, GridRenderPass } from './charts/ind
 export type {
   BaseChartConfig,
   InteractionHandler,
+  ExportImageOptions,
   ScatterChartOptions,
   ScatterChartConfig,
   PointShape,

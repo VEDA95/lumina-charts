@@ -601,6 +601,14 @@ export class ScatterChart extends BaseChart {
   }
 
   /**
+   * Get the axes as an image for export compositing
+   */
+  protected override async getAxesImage(): Promise<HTMLImageElement | null> {
+    if (!this.axisRenderer) return null;
+    return this.axisRenderer.toImage();
+  }
+
+  /**
    * Clean up resources
    */
   dispose(): void {

@@ -82,6 +82,18 @@ export interface InteractionHandler {
 }
 
 /**
+ * Options for chart image export
+ */
+export interface ExportImageOptions {
+  /** Image format (default: 'png') */
+  format?: 'png' | 'jpeg';
+  /** JPEG quality 0-1 (default: 0.92) */
+  quality?: number;
+  /** Background color (default: '#ffffff') */
+  backgroundColor?: string;
+}
+
+/**
  * Base chart class that all chart types extend
  */
 export abstract class BaseChart extends EventEmitter<ChartEventMap> {
@@ -634,17 +646,157 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
   }
 
   /**
-   * Export chart as PNG data URL
+   * Export chart as PNG data URL (WebGL canvas only, no axes)
+   * @deprecated Use exportImage() for complete chart export with axes
    */
   toDataURL(type: string = 'image/png', quality?: number): string {
     return this.renderer.toDataURL(type, quality);
   }
 
   /**
-   * Export chart as Blob
+   * Export chart as Blob (WebGL canvas only, no axes)
+   * @deprecated Use exportImageBlob() for complete chart export with axes
    */
   toBlob(type: string = 'image/png', quality?: number): Promise<Blob> {
     return this.renderer.toBlob(type, quality);
+  }
+
+  /**
+   * Export the complete chart (data + axes) as a PNG/JPEG data URL
+   * @param options Export options
+   * @returns Promise resolving to data URL
+   */
+  async exportImage(options?: ExportImageOptions): Promise<string> {
+    const { format = 'png', quality, backgroundColor = '#ffffff' } = options ?? {};
+
+    // Get dimensions (CSS pixels)
+    const rect = this.containerElement.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+
+    // Create compositing canvas at device pixel ratio for crisp output
+    const canvas = document.createElement('canvas');
+    canvas.width = width * this.pixelRatio;
+    canvas.height = height * this.pixelRatio;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Failed to get 2D canvas context for export');
+    }
+
+    // Scale context to handle device pixel ratio
+    ctx.scale(this.pixelRatio, this.pixelRatio);
+
+    // 1. Fill background
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, width, height);
+
+    // 2. Force a synchronous render to ensure WebGL content is present
+    // (WebGL's preserveDrawingBuffer is false by default, so buffer may be cleared)
+    this.renderer.render(this.state);
+    this.renderer.gl.finish();
+
+    // 3. Draw WebGL canvas (already rendered at device pixel ratio)
+    ctx.drawImage(
+      this.canvas,
+      0,
+      0,
+      this.canvas.width,
+      this.canvas.height, // source (device pixels)
+      0,
+      0,
+      width,
+      height // destination (CSS pixels, will be scaled by ctx.scale)
+    );
+
+    // 4. Draw SVG axes on top (if available)
+    const axesImage = await this.getAxesImage();
+    if (axesImage) {
+      ctx.drawImage(axesImage, 0, 0, width, height);
+    }
+
+    // 5. Export as data URL
+    const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+    return canvas.toDataURL(mimeType, quality);
+  }
+
+  /**
+   * Export the complete chart (data + axes) as a Blob
+   * @param options Export options
+   * @returns Promise resolving to Blob
+   */
+  async exportImageBlob(options?: ExportImageOptions): Promise<Blob> {
+    const { format = 'png', quality, backgroundColor = '#ffffff' } = options ?? {};
+
+    // Get dimensions (CSS pixels)
+    const rect = this.containerElement.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+
+    // Create compositing canvas at device pixel ratio for crisp output
+    const canvas = document.createElement('canvas');
+    canvas.width = width * this.pixelRatio;
+    canvas.height = height * this.pixelRatio;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Failed to get 2D canvas context for export');
+    }
+
+    // Scale context to handle device pixel ratio
+    ctx.scale(this.pixelRatio, this.pixelRatio);
+
+    // 1. Fill background
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, width, height);
+
+    // 2. Force a synchronous render to ensure WebGL content is present
+    // (WebGL's preserveDrawingBuffer is false by default, so buffer may be cleared)
+    this.renderer.render(this.state);
+    this.renderer.gl.finish();
+
+    // 3. Draw WebGL canvas
+    ctx.drawImage(
+      this.canvas,
+      0,
+      0,
+      this.canvas.width,
+      this.canvas.height,
+      0,
+      0,
+      width,
+      height
+    );
+
+    // 4. Draw SVG axes on top (if available)
+    const axesImage = await this.getAxesImage();
+    if (axesImage) {
+      ctx.drawImage(axesImage, 0, 0, width, height);
+    }
+
+    // 5. Export as Blob
+    const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create image blob'));
+          }
+        },
+        mimeType,
+        quality
+      );
+    });
+  }
+
+  /**
+   * Get the axes as an image for export compositing
+   * Override in subclasses that have axes (ScatterChart, LineChart)
+   */
+  protected async getAxesImage(): Promise<HTMLImageElement | null> {
+    return null;
   }
 
   /**

@@ -20,6 +20,7 @@ const btn100k = document.getElementById('btn-100k')!;
 const btn1m = document.getElementById('btn-1m')!;
 const btnReset = document.getElementById('btn-reset')!;
 const btnClear = document.getElementById('btn-clear')!;
+const btnExport = document.getElementById('btn-export')!;
 const statPoints = document.getElementById('stat-points')!;
 const statRender = document.getElementById('stat-render')!;
 const statHovered = document.getElementById('stat-hovered')!;
@@ -348,6 +349,39 @@ btnReset.addEventListener('click', () => {
 btnClear.addEventListener('click', () => {
   if (selectionHandler) {
     selectionHandler.clearSelection();
+  }
+});
+
+btnExport.addEventListener('click', async () => {
+  if (!chart) return;
+
+  try {
+    // Show loading state
+    btnExport.textContent = 'Exporting...';
+    btnExport.setAttribute('disabled', 'true');
+
+    // Export as blob and trigger download
+    const blob = await chart.exportImageBlob({ format: 'png' });
+    const url = URL.createObjectURL(blob);
+
+    // Create download link
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lumina-chart-${currentChartType}-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // Clean up
+    URL.revokeObjectURL(url);
+    console.log('Chart exported successfully');
+  } catch (error) {
+    console.error('Failed to export chart:', error);
+    alert('Failed to export chart. See console for details.');
+  } finally {
+    // Reset button state
+    btnExport.textContent = 'Export PNG';
+    btnExport.removeAttribute('disabled');
   }
 });
 

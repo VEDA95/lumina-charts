@@ -3,7 +3,7 @@
  */
 
 export { BaseChart } from './BaseChart.js';
-export type { BaseChartConfig, InteractionHandler } from './BaseChart.js';
+export type { BaseChartConfig, InteractionHandler, ExportImageOptions } from './BaseChart.js';
 
 export { GridRenderPass } from './GridRenderPass.js';
 export type { GridRenderPassConfig } from './GridRenderPass.js';

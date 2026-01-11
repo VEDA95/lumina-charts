@@ -337,6 +337,84 @@ export class AxisRenderer {
   }
 
   /**
+   * Export the SVG axes as an Image element
+   * This is used for chart export to combine WebGL canvas with SVG axes
+   * @returns Promise that resolves to an Image containing the axes
+   */
+  async toImage(): Promise<HTMLImageElement> {
+    // Clone SVG to avoid modifying the live DOM
+    const svgClone = this.svg.cloneNode(true) as SVGSVGElement;
+
+    // Set explicit dimensions on the clone
+    svgClone.setAttribute('width', String(this.width));
+    svgClone.setAttribute('height', String(this.height));
+
+    // Inline all computed styles (required for serialization since CSS variables won't work)
+    this.inlineStyles(svgClone);
+
+    // Serialize SVG to string
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svgClone);
+
+    // Create blob and object URL
+    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    // Load as image
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to load SVG axes as image'));
+      };
+      img.src = url;
+    });
+  }
+
+  /**
+   * Inline computed styles into SVG elements (required for export)
+   * CSS variables and external styles won't work in serialized SVG
+   */
+  private inlineStyles(svg: SVGSVGElement): void {
+    // Get all elements that need styling
+    const elements = svg.querySelectorAll('text, line, path, g');
+
+    elements.forEach((el) => {
+      const element = el as SVGElement;
+      const computed = window.getComputedStyle(element);
+      const style = element.style;
+
+      // Copy essential styles based on element type
+      if (el.tagName === 'text') {
+        style.fill = computed.fill;
+        style.fontSize = computed.fontSize;
+        style.fontFamily = computed.fontFamily;
+        style.fontWeight = computed.fontWeight;
+        style.textAnchor = computed.textAnchor;
+      } else if (el.tagName === 'line' || el.tagName === 'path') {
+        style.stroke = computed.stroke;
+        style.strokeWidth = computed.strokeWidth;
+        style.fill = computed.fill;
+      } else if (el.tagName === 'g') {
+        // Groups may have font styling
+        style.fontSize = computed.fontSize;
+        style.fontFamily = computed.fontFamily;
+      }
+    });
+  }
+
+  /**
+   * Get the SVG element (for direct access if needed)
+   */
+  getSVGElement(): SVGSVGElement {
+    return this.svg;
+  }
+
+  /**
    * Clean up resources
    */
   dispose(): void {
