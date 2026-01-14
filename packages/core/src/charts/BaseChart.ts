@@ -5,7 +5,6 @@
 import type {
   ChartOptions,
   ChartState,
-  ChartEvents,
   RenderPass,
   Margins,
   DataDomain,
@@ -20,7 +19,6 @@ import { WebGLRenderer } from '../renderer/WebGLRenderer.js';
 import { DataProcessor } from '../data/DataProcessor.js';
 import { SpatialIndex } from '../data/SpatialIndex.js';
 import { LODManager } from '../data/LODManager.js';
-import { createCanvas, resizeCanvas, getRelativePosition } from '../utils/dom.js';
 
 /**
  * Configuration for creating a chart
@@ -262,29 +260,21 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
   private setupEventListeners(): void {
     const signal = this.abortController.signal;
 
-    this.canvas.addEventListener(
-      'pointerdown',
-      (e) => this.handlePointerEvent('pointerdown', e),
-      { signal }
-    );
+    this.canvas.addEventListener('pointerdown', (e) => this.handlePointerEvent('pointerdown', e), {
+      signal,
+    });
 
-    this.canvas.addEventListener(
-      'pointermove',
-      (e) => this.handlePointerEvent('pointermove', e),
-      { signal }
-    );
+    this.canvas.addEventListener('pointermove', (e) => this.handlePointerEvent('pointermove', e), {
+      signal,
+    });
 
-    this.canvas.addEventListener(
-      'pointerup',
-      (e) => this.handlePointerEvent('pointerup', e),
-      { signal }
-    );
+    this.canvas.addEventListener('pointerup', (e) => this.handlePointerEvent('pointerup', e), {
+      signal,
+    });
 
-    this.canvas.addEventListener(
-      'pointerleave',
-      (e) => this.handlePointerEvent('pointerup', e),
-      { signal }
-    );
+    this.canvas.addEventListener('pointerleave', (e) => this.handlePointerEvent('pointerup', e), {
+      signal,
+    });
 
     this.canvas.addEventListener(
       'wheel',
@@ -333,21 +323,18 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
   /**
    * Handle pointer events
    */
-  private handlePointerEvent(type: 'pointerdown' | 'pointermove' | 'pointerup', e: PointerEvent): void {
+  private handlePointerEvent(
+    type: 'pointerdown' | 'pointermove' | 'pointerup',
+    e: PointerEvent
+  ): void {
     const event = this.createInteractionEvent(type, e);
 
     // Dispatch to interaction handlers
     for (const handler of this.interactions.values()) {
       if (!handler.enabled) continue;
-
-      if (type === 'pointerdown' && handler.onPointerDown) {
-        handler.onPointerDown(event);
-      } else if (type === 'pointermove' && handler.onPointerMove) {
-        handler.onPointerMove(event);
-      } else if (type === 'pointerup' && handler.onPointerUp) {
-        handler.onPointerUp(event);
-      }
-
+      if (type === 'pointerdown' && handler.onPointerDown) handler.onPointerDown(event);
+      if (type === 'pointermove' && handler.onPointerMove) handler.onPointerMove(event);
+      if (type === 'pointerup' && handler.onPointerUp) handler.onPointerUp(event);
       if (event.defaultPrevented) break;
     }
   }
@@ -414,9 +401,7 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
    * Add an interaction handler
    */
   addInteraction(handler: InteractionHandler): void {
-    if (this.interactions.has(handler.id)) {
-      this.removeInteraction(handler.id);
-    }
+    if (this.interactions.has(handler.id)) this.removeInteraction(handler.id);
     handler.attach(this);
     this.interactions.set(handler.id, handler);
   }
@@ -426,10 +411,9 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
    */
   removeInteraction(id: string): void {
     const handler = this.interactions.get(id);
-    if (handler) {
-      handler.detach();
-      this.interactions.delete(id);
-    }
+    if (handler == null) return;
+    handler.detach();
+    this.interactions.delete(id);
   }
 
   /**
@@ -447,9 +431,7 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
     this.series = series;
 
     // Update visible series set
-    this.state.visibleSeries = new Set(
-      series.filter((s) => s.visible !== false).map((s) => s.id)
-    );
+    this.state.visibleSeries = new Set(series.filter((s) => s.visible !== false).map((s) => s.id));
 
     // Calculate bounds
     const bounds = this.dataProcessor.calculateBounds(series);
@@ -556,7 +538,8 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
       x: this.margins.left * this.pixelRatio,
       y: this.margins.top * this.pixelRatio,
       width: this.state.viewport.width - (this.margins.left + this.margins.right) * this.pixelRatio,
-      height: this.state.viewport.height - (this.margins.top + this.margins.bottom) * this.pixelRatio,
+      height:
+        this.state.viewport.height - (this.margins.top + this.margins.bottom) * this.pixelRatio,
     };
   }
 
@@ -566,7 +549,6 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
   pixelToData(pixelX: number, pixelY: number): { x: number; y: number } {
     const plot = this.getPlotArea();
     const { domain } = this.state;
-
     const x = domain.x[0] + ((pixelX - plot.x) / plot.width) * (domain.x[1] - domain.x[0]);
     const y = domain.y[1] - ((pixelY - plot.y) / plot.height) * (domain.y[1] - domain.y[0]);
 
@@ -579,7 +561,6 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
   dataToPixel(dataX: number, dataY: number): { x: number; y: number } {
     const plot = this.getPlotArea();
     const { domain } = this.state;
-
     const x = plot.x + ((dataX - domain.x[0]) / (domain.x[1] - domain.x[0])) * plot.width;
     const y = plot.y + ((domain.y[1] - dataY) / (domain.y[1] - domain.y[0])) * plot.height;
 
@@ -739,9 +720,7 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
     canvas.height = height * this.pixelRatio;
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      throw new Error('Failed to get 2D canvas context for export');
-    }
+    if (!ctx) throw new Error('Failed to get 2D canvas context for export');
 
     // Scale context to handle device pixel ratio
     ctx.scale(this.pixelRatio, this.pixelRatio);
@@ -756,23 +735,11 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
     this.renderer.gl.finish();
 
     // 3. Draw WebGL canvas
-    ctx.drawImage(
-      this.canvas,
-      0,
-      0,
-      this.canvas.width,
-      this.canvas.height,
-      0,
-      0,
-      width,
-      height
-    );
+    ctx.drawImage(this.canvas, 0, 0, this.canvas.width, this.canvas.height, 0, 0, width, height);
 
     // 4. Draw SVG axes on top (if available)
     const axesImage = await this.getAxesImage();
-    if (axesImage) {
-      ctx.drawImage(axesImage, 0, 0, width, height);
-    }
+    if (axesImage) ctx.drawImage(axesImage, 0, 0, width, height);
 
     // 5. Export as Blob
     const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';

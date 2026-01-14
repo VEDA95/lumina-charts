@@ -5,6 +5,7 @@
 // Data types
 export type {
   DataPoint,
+  BubbleDataPoint,
   Series,
   SeriesStyle,
   PointShape,

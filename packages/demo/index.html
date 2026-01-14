@@ -22,6 +22,24 @@
       >
         Line Chart
       </button>
+      <button
+        id="btn-bar"
+        class="cursor-pointer rounded-md bg-gray-400 px-4 py-2 text-sm text-white hover:bg-gray-500"
+      >
+        Bar Chart
+      </button>
+      <button
+        id="btn-histogram"
+        class="cursor-pointer rounded-md bg-gray-400 px-4 py-2 text-sm text-white hover:bg-gray-500"
+      >
+        Histogram
+      </button>
+      <button
+        id="btn-bubble"
+        class="cursor-pointer rounded-md bg-gray-400 px-4 py-2 text-sm text-white hover:bg-gray-500"
+      >
+        Bubble Chart
+      </button>
     </div>
 
     <div class="mb-5 flex flex-wrap gap-2">
@@ -114,10 +132,47 @@
           <div id="stat-visible" class="text-xl font-semibold text-gray-800">0</div>
         </div>
       </div>
-      <div class="mt-3 flex items-center gap-2">
+      <div class="mt-3 flex items-center gap-4 flex-wrap">
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" id="lod-toggle" checked class="h-4 w-4" />
           <span class="text-sm text-gray-600">Enable LOD (auto-decimation for large datasets)</span>
+        </label>
+      </div>
+      <div id="histogram-options" class="mt-3 flex items-center gap-4 flex-wrap hidden">
+        <span class="text-sm font-medium text-gray-700">Histogram Overlays:</span>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="density-toggle" checked class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Density Curve (KDE)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="cumulative-toggle" checked class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Cumulative Distribution</span>
+        </label>
+      </div>
+      <div id="line-options" class="mt-3 flex items-center gap-4 flex-wrap hidden">
+        <span class="text-sm font-medium text-gray-700">Line Options:</span>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="show-points-toggle" class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Show Data Points</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="smooth-toggle" class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Smooth Curves</span>
+        </label>
+      </div>
+      <div id="bubble-options" class="mt-3 flex items-center gap-4 flex-wrap hidden">
+        <span class="text-sm font-medium text-gray-700">Bubble Scale:</span>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="bubble-scale" id="scale-sqrt" checked class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Square Root (Recommended)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="bubble-scale" id="scale-linear" class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Linear</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="bubble-scale" id="scale-log" class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Logarithmic</span>
         </label>
       </div>
     </div>

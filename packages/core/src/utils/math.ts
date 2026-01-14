@@ -216,3 +216,123 @@ export function findClosestIndex(arr: ArrayLike<number>, target: number): number
 
   return Math.abs(target - prev) <= Math.abs(target - curr) ? idx - 1 : idx;
 }
+
+/**
+ * Find minimum value in array (safe for large arrays)
+ * Unlike Math.min(...arr), this doesn't hit call stack limits
+ */
+export function arrayMin(values: number[]): number {
+  if (values.length === 0) return NaN;
+  let min = values[0];
+  for (let i = 1; i < values.length; i++) {
+    if (values[i] < min) min = values[i];
+  }
+  return min;
+}
+
+/**
+ * Find maximum value in array (safe for large arrays)
+ * Unlike Math.max(...arr), this doesn't hit call stack limits
+ */
+export function arrayMax(values: number[]): number {
+  if (values.length === 0) return NaN;
+  let max = values[0];
+  for (let i = 1; i < values.length; i++) {
+    if (values[i] > max) max = values[i];
+  }
+  return max;
+}
+
+/**
+ * Point interface for spline calculations
+ */
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
+/**
+ * Catmull-Rom spline interpolation between points
+ * Creates a smooth curve that passes through all control points
+ *
+ * @param points - Array of control points (must have at least 2 points)
+ * @param tension - Spline tension (0.0 = sharp, 0.5 = default smooth, 1.0 = very smooth)
+ * @param segments - Number of interpolated points between each pair of control points
+ * @returns Array of interpolated points forming a smooth curve
+ */
+export function catmullRomSpline(
+  points: Point2D[],
+  tension: number = 0.5,
+  segments: number = 16
+): Point2D[] {
+  if (points.length < 2) return [...points];
+  if (points.length === 2) {
+    // Linear interpolation for 2 points
+    const result: Point2D[] = [];
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      result.push({
+        x: lerp(points[0].x, points[1].x, t),
+        y: lerp(points[0].y, points[1].y, t),
+      });
+    }
+    return result;
+  }
+
+  const result: Point2D[] = [];
+
+  // Process each segment between control points
+  for (let i = 0; i < points.length - 1; i++) {
+    // Get 4 points for Catmull-Rom (p0, p1, p2, p3)
+    // p1 and p2 are the segment endpoints
+    const p0 = points[Math.max(0, i - 1)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(points.length - 1, i + 2)];
+
+    // Generate points along this segment
+    const numSegments = i === points.length - 2 ? segments + 1 : segments;
+    for (let j = 0; j < numSegments; j++) {
+      const t = j / segments;
+      result.push(catmullRomPoint(p0, p1, p2, p3, t, tension));
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Calculate a single point on a Catmull-Rom spline segment
+ *
+ * @param p0 - Point before segment start
+ * @param p1 - Segment start point
+ * @param p2 - Segment end point
+ * @param p3 - Point after segment end
+ * @param t - Parameter [0, 1] along segment
+ * @param tension - Spline tension
+ */
+function catmullRomPoint(
+  p0: Point2D,
+  p1: Point2D,
+  p2: Point2D,
+  p3: Point2D,
+  t: number,
+  tension: number
+): Point2D {
+  const t2 = t * t;
+  const t3 = t2 * t;
+
+  // Catmull-Rom basis functions with tension parameter
+  // tension of 0.5 gives the standard Catmull-Rom spline
+  const s = (1 - tension) / 2;
+
+  const b0 = -s * t3 + 2 * s * t2 - s * t;
+  const b1 = (2 - s) * t3 + (s - 3) * t2 + 1;
+  const b2 = (s - 2) * t3 + (3 - 2 * s) * t2 + s * t;
+  const b3 = s * t3 - s * t2;
+
+  return {
+    x: b0 * p0.x + b1 * p1.x + b2 * p2.x + b3 * p3.x,
+    y: b0 * p0.y + b1 * p1.y + b2 * p2.y + b3 * p3.y,
+  };
+}

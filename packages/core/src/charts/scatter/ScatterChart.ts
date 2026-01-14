@@ -17,7 +17,6 @@ import { BaseChart, type BaseChartConfig } from '../BaseChart.js';
 import { ScatterRenderPass } from './ScatterRenderPass.js';
 import { GridRenderPass } from '../GridRenderPass.js';
 import { AxisRenderer } from '../../axes/AxisRenderer.js';
-import type { LODLevel } from '../../data/LODManager.js';
 
 /**
  * Point shape types
@@ -252,9 +251,7 @@ export class ScatterChart extends BaseChart {
    * Get series data at current LOD level
    */
   private getSeriesDataAtLOD(series: Series, seriesIndex: number): Series {
-    if (!this.lodEnabled || !this.lodManager.hasLevels(series.id)) {
-      return series;
-    }
+    if (!this.lodEnabled || !this.lodManager.hasLevels(series.id)) return series;
 
     // Select appropriate LOD level based on viewport and domain
     const { width } = this.state.viewport;
@@ -442,7 +439,9 @@ export class ScatterChart extends BaseChart {
       const currentLevel = this.currentLODLevels.get(s.id) ?? 0;
 
       if (lodLevel.level !== currentLevel) {
-        console.log(`LOD level change: ${currentLevel} -> ${lodLevel.level} (${lodLevel.pointCount} points)`);
+        console.log(
+          `LOD level change: ${currentLevel} -> ${lodLevel.level} (${lodLevel.pointCount} points)`
+        );
         needsUpdate = true;
         break;
       }
@@ -504,9 +503,7 @@ export class ScatterChart extends BaseChart {
    */
   render(): void {
     super.render();
-    if (this.axisRenderer) {
-      this.axisRenderer.render();
-    }
+    if (this.axisRenderer) this.axisRenderer.render();
   }
 
   /**
@@ -521,9 +518,7 @@ export class ScatterChart extends BaseChart {
    */
   override pixelToData(pixelX: number, pixelY: number): { x: number; y: number } {
     // Fall back to base implementation if axis renderer not ready
-    if (!this.axisRenderer) {
-      return super.pixelToData(pixelX, pixelY);
-    }
+    if (!this.axisRenderer) return super.pixelToData(pixelX, pixelY);
     // Convert from device pixels to CSS pixels for axis renderer
     const cssX = pixelX / this.pixelRatio;
     const cssY = pixelY / this.pixelRatio;
@@ -535,9 +530,7 @@ export class ScatterChart extends BaseChart {
    */
   override dataToPixel(dataX: number, dataY: number): { x: number; y: number } {
     // Fall back to base implementation if axis renderer not ready
-    if (!this.axisRenderer) {
-      return super.dataToPixel(dataX, dataY);
-    }
+    if (!this.axisRenderer) return super.dataToPixel(dataX, dataY);
     const { x, y } = this.axisRenderer.dataToPixel(dataX, dataY);
     // Convert from CSS pixels to device pixels
     return {
@@ -612,9 +605,7 @@ export class ScatterChart extends BaseChart {
    * Clean up resources
    */
   dispose(): void {
-    if (this.axisRenderer) {
-      this.axisRenderer.dispose();
-    }
+    if (this.axisRenderer) this.axisRenderer.dispose();
     this.processedData.clear();
     this.rawSeriesData.clear();
     this.currentLODLevels.clear();

@@ -12,6 +12,15 @@ export interface DataPoint {
 }
 
 /**
+ * Data point with z-value for bubble charts
+ * The z-value determines the bubble size
+ */
+export interface BubbleDataPoint extends DataPoint {
+  /** Z-value that determines bubble size */
+  z: number;
+}
+
+/**
  * A series of data points with metadata
  */
 export interface Series<T extends DataPoint = DataPoint> {

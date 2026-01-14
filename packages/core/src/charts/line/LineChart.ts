@@ -17,6 +17,7 @@ import { LineRenderPass } from './LineRenderPass.js';
 import { GridRenderPass } from '../GridRenderPass.js';
 import { AxisRenderer } from '../../axes/AxisRenderer.js';
 import type { LODLevel } from '../../data/LODManager.js';
+import { catmullRomSpline, type Point2D } from '../../utils/math.js';
 
 /**
  * Line chart specific options
@@ -38,6 +39,12 @@ export interface LineChartOptions extends ChartOptions {
   showPoints?: boolean;
   /** Point size when showing points */
   pointSize?: number;
+  /** Point color (defaults to line color) */
+  pointColor?: RGBAColor;
+  /** Use smooth curved lines (Catmull-Rom spline interpolation) */
+  smooth?: boolean;
+  /** Smoothing tension (0 = sharp, 0.5 = default, 1 = very smooth) */
+  smoothTension?: number;
 }
 
 /**
@@ -192,6 +199,13 @@ export class LineChart extends BaseChart {
     // Clear existing series data
     this.lineRenderPass.clearAllSeries();
 
+    // Get visual options
+    const showPoints = this.lineOptions.showPoints ?? false;
+    const pointSize = this.lineOptions.pointSize ?? 6;
+    const pointColor = this.lineOptions.pointColor;
+    const smooth = this.lineOptions.smooth ?? false;
+    const smoothTension = this.lineOptions.smoothTension ?? 0.5;
+
     // Process each series
     for (let seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
       const s = series[seriesIndex];
@@ -211,11 +225,26 @@ export class LineChart extends BaseChart {
       // Sort data by x value for proper line rendering
       const sortedData = [...lodData].sort((a, b) => a.x - b.x);
 
-      // Build position array
-      const positions = new Float32Array(sortedData.length * 2);
+      // Store original positions for point markers
+      const originalPositions = new Float32Array(sortedData.length * 2);
       for (let i = 0; i < sortedData.length; i++) {
-        positions[i * 2] = sortedData[i].x;
-        positions[i * 2 + 1] = sortedData[i].y;
+        originalPositions[i * 2] = sortedData[i].x;
+        originalPositions[i * 2 + 1] = sortedData[i].y;
+      }
+
+      // Apply smooth interpolation if enabled
+      let lineData: Point2D[] = sortedData;
+      if (smooth && sortedData.length >= 2) {
+        // Calculate segments based on data density (more points = fewer segments per pair)
+        const segments = Math.max(4, Math.min(32, Math.ceil(200 / sortedData.length)));
+        lineData = catmullRomSpline(sortedData, smoothTension, segments);
+      }
+
+      // Build position array for line
+      const positions = new Float32Array(lineData.length * 2);
+      for (let i = 0; i < lineData.length; i++) {
+        positions[i * 2] = lineData[i].x;
+        positions[i * 2 + 1] = lineData[i].y;
       }
 
       // Update render pass
@@ -223,8 +252,13 @@ export class LineChart extends BaseChart {
         seriesId: s.id,
         positions,
         color,
-        pointCount: sortedData.length,
+        pointCount: lineData.length,
         lineWidth,
+        showPoints,
+        pointSize,
+        pointColor: pointColor ?? color,
+        originalPositions: showPoints ? originalPositions : undefined,
+        originalPointCount: showPoints ? sortedData.length : undefined,
       });
     }
   }
@@ -368,10 +402,19 @@ export class LineChart extends BaseChart {
     }
 
     // Re-process data if visual properties changed
-    if (options.lineWidth || options.lineColor) {
+    const needsRerender =
+      options.lineWidth !== undefined ||
+      options.lineColor !== undefined ||
+      options.showPoints !== undefined ||
+      options.pointSize !== undefined ||
+      options.pointColor !== undefined ||
+      options.smooth !== undefined ||
+      options.smoothTension !== undefined;
+
+    if (needsRerender) {
       Object.assign(this.lineOptions, options);
       if (this.series.length > 0) {
-        this.onDataUpdate(this.series);
+        this.uploadDataToGPU(this.series);
       }
     }
 
@@ -490,6 +533,44 @@ export class LineChart extends BaseChart {
    */
   getLODMemoryUsage(): { seriesCount: number; totalBytes: number; levelCounts: number[] } {
     return this.lodManager.getMemoryUsage();
+  }
+
+  /**
+   * Enable or disable smooth curved lines
+   */
+  setSmooth(enabled: boolean, tension?: number): void {
+    const options: Partial<LineChartOptions> = { smooth: enabled };
+    if (tension !== undefined) {
+      options.smoothTension = tension;
+    }
+    this.updateOptions(options);
+    this.render();
+  }
+
+  /**
+   * Check if smooth lines are enabled
+   */
+  isSmooth(): boolean {
+    return this.lineOptions.smooth ?? false;
+  }
+
+  /**
+   * Enable or disable showing data points on lines
+   */
+  setShowPoints(enabled: boolean, size?: number): void {
+    const options: Partial<LineChartOptions> = { showPoints: enabled };
+    if (size !== undefined) {
+      options.pointSize = size;
+    }
+    this.updateOptions(options);
+    this.render();
+  }
+
+  /**
+   * Check if data points are shown
+   */
+  isShowingPoints(): boolean {
+    return this.lineOptions.showPoints ?? false;
   }
 
   /**
