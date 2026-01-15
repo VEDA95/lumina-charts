@@ -155,10 +155,18 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'):
       },
     });
   } else if (type === 'line') {
+    const xScale = getXScaleType();
+    const xAxisLabel = xScale === 'time' ? 'Date' : 'X Value';
+
     lineChart = new LineChart({
       container: chartContainer,
       options: {
         ...chartOptions,
+        xAxis: {
+          label: xAxisLabel,
+          ticks: { count: 10 },
+          type: xScale,
+        },
         lineWidth: 2,
         showPoints: showPointsToggle.checked,
         smooth: smoothToggle.checked,
@@ -166,14 +174,17 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'):
     });
     chart = lineChart;
   } else if (type === 'bar') {
+    const xScale = getXScaleType();
+    const xAxisLabel = xScale === 'time' ? 'Month' : 'Category';
+
     barChart = new BarChart({
       container: chartContainer,
       options: {
         ...chartOptions,
         xAxis: {
-          label: 'Category',
+          label: xAxisLabel,
           ticks: { count: 6 },
-          type: 'linear', // Bar charts use linear scale for categories
+          type: xScale === 'band' ? 'linear' : xScale, // band scale handled via setCategories
         },
         yAxis: {
           label: 'Value',
@@ -251,7 +262,20 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'):
   // Event listeners
   chart?.on('hover', (e) => {
     if (e.detail.point) {
-      statHovered.textContent = `(${e.detail.point.x.toFixed(2)}, ${e.detail.point.y.toFixed(2)})`;
+      // Format x value based on scale type
+      let xStr: string;
+      const xScale = getXScaleType();
+      if (xScale === 'time') {
+        // Format timestamp as date
+        const date = new Date(e.detail.point.x);
+        xStr = date.toLocaleDateString();
+      } else {
+        xStr = e.detail.point.x.toFixed(2);
+      }
+
+      // Format y value
+      const yStr = e.detail.point.y.toFixed(2);
+      statHovered.textContent = `(${xStr}, ${yStr})`;
     }
   });
 
@@ -391,9 +415,27 @@ function generateScatterData(count: number): Series[] {
 // Bar chart categories
 const BAR_CATEGORIES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+// Get timestamps for monthly data (for time scale bar charts)
+function getMonthTimestamps(monthCount: number): number[] {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const timestamps: number[] = [];
+
+  for (let i = 0; i < monthCount; i++) {
+    // Start from January of current year
+    const date = new Date(currentYear, i, 1);
+    timestamps.push(date.getTime());
+  }
+
+  return timestamps;
+}
+
 // Generate bar chart data
-function generateBarData(categoryCount: number): Series[] {
+function generateBarData(categoryCount: number): { series: Series[]; categories: string[]; timestamps: number[] } {
+  const xScaleType = getXScaleType();
+  const useTimeScale = xScaleType === 'time';
   const categories = BAR_CATEGORIES.slice(0, categoryCount);
+  const timestamps = getMonthTimestamps(categoryCount);
 
   // Generate 2-3 series with random values
   const seriesCount = Math.min(3, Math.max(1, Math.floor(categoryCount / 4)));
@@ -409,9 +451,10 @@ function generateBarData(categoryCount: number): Series[] {
 
   for (let s = 0; s < seriesCount; s++) {
     const data: DataPoint[] = [];
-    for (let i = 0; i < categories.length; i++) {
+    for (let i = 0; i < categoryCount; i++) {
       data.push({
-        x: i,
+        // Use timestamp for time scale, index for band scale
+        x: useTimeScale ? timestamps[i] : i,
         y: Math.random() * 200 + 50, // Random value between 50-250
       });
     }
@@ -423,7 +466,7 @@ function generateBarData(categoryCount: number): Series[] {
     });
   }
 
-  return result;
+  return { series: result, categories, timestamps };
 }
 
 // Generate line chart data (time series style)
@@ -432,6 +475,7 @@ function generateLineData(count: number): Series[] {
   const yScaleType = getYScaleType();
   const useLogX = xScaleType === 'log';
   const useLogY = yScaleType === 'log';
+  const useTimeX = xScaleType === 'time';
 
   // Generate multiple series with different patterns
   const series1: DataPoint[] = [];
@@ -441,16 +485,28 @@ function generateLineData(count: number): Series[] {
   // Divide points among 3 series
   const pointsPerSeries = Math.floor(count / 3);
 
-  // For log scales, use different ranges
-  const xMin = useLogX ? 1 : 0;
-  const xMax = useLogX ? 1000 : 100;
+  // Time range: last 30 days
+  const now = Date.now();
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+  const startTime = now - thirtyDaysMs;
+
+  // For log/linear scales
   const yCenter = useLogY ? 100 : 50;
   const yRange = useLogY ? 50 : 20;
 
-  // Series 1: Sine wave with noise
+  // Series 1: Sine wave with noise (or daily pattern for time)
   for (let i = 0; i < pointsPerSeries; i++) {
     const t = i / pointsPerSeries;
-    const x = useLogX ? Math.pow(10, t * 3) : t * 100; // 1-1000 for log, 0-100 for linear
+    let x: number;
+
+    if (useTimeX) {
+      x = startTime + t * thirtyDaysMs;
+    } else if (useLogX) {
+      x = Math.pow(10, t * 3); // 1-1000
+    } else {
+      x = t * 100; // 0-100
+    }
+
     let y = yCenter + Math.sin(t * Math.PI * 4) * yRange + (Math.random() - 0.5) * (yRange / 2);
     if (useLogY) y = Math.max(1, y);
     series1.push({ x, y });
@@ -460,7 +516,16 @@ function generateLineData(count: number): Series[] {
   let y2 = useLogY ? 50 : 30;
   for (let i = 0; i < pointsPerSeries; i++) {
     const t = i / pointsPerSeries;
-    const x = useLogX ? Math.pow(10, t * 3) : t * 100;
+    let x: number;
+
+    if (useTimeX) {
+      x = startTime + t * thirtyDaysMs;
+    } else if (useLogX) {
+      x = Math.pow(10, t * 3);
+    } else {
+      x = t * 100;
+    }
+
     y2 += (Math.random() - 0.5) * (useLogY ? 10 : 2);
     y2 = Math.max(useLogY ? 10 : 10, Math.min(useLogY ? 500 : 90, y2));
     series2.push({ x, y: y2 });
@@ -469,7 +534,16 @@ function generateLineData(count: number): Series[] {
   // Series 3: Exponential growth with oscillation
   for (let i = 0; i < pointsPerSeries; i++) {
     const t = i / pointsPerSeries;
-    const x = useLogX ? Math.pow(10, t * 3) : t * 100;
+    let x: number;
+
+    if (useTimeX) {
+      x = startTime + t * thirtyDaysMs;
+    } else if (useLogX) {
+      x = Math.pow(10, t * 3);
+    } else {
+      x = t * 100;
+    }
+
     let y3 = useLogY
       ? 10 * Math.pow(10, t * 1.5) + Math.sin(t * Math.PI * 6) * 20
       : 20 + t * 50 + Math.sin(t * Math.PI * 6) * 10;
@@ -641,10 +715,11 @@ function loadData(count: number): void {
       totalPoints += s.data.length;
     }
   } else if (currentChartType === 'bar') {
-    series = generateBarData(barCategoryCount);
-    // Set categories on bar chart
-    if (barChart) {
-      barChart.setCategories(BAR_CATEGORIES.slice(0, barCategoryCount));
+    const barData = generateBarData(barCategoryCount);
+    series = barData.series;
+    // Set categories on bar chart (for band scale)
+    if (barChart && getXScaleType() === 'band') {
+      barChart.setCategories(barData.categories);
     }
     for (const s of series) {
       totalPoints += s.data.length;
@@ -958,15 +1033,27 @@ function updateAxisScales(): void {
 xScaleSelect.addEventListener('change', updateAxisScales);
 yScaleSelect.addEventListener('change', updateAxisScales);
 
-// Hide axis scale options for bar charts (they use category x-axis)
+// Update axis scale options based on chart type
 function updateAxisScaleVisibility(): void {
+  xScaleSelect.disabled = false;
+  xScaleSelect.parentElement!.style.opacity = '1';
+
+  // Set appropriate default scales and options per chart type
   if (currentChartType === 'bar') {
-    // For bar charts, only show Y scale (X is always category)
-    xScaleSelect.disabled = true;
-    xScaleSelect.parentElement!.style.opacity = '0.5';
+    // Bar charts: default to band (category) or time for X-axis
+    if (xScaleSelect.value !== 'band' && xScaleSelect.value !== 'time') {
+      xScaleSelect.value = 'band';
+    }
+  } else if (currentChartType === 'line') {
+    // Line charts: support time scale, default to linear or time
+    if (xScaleSelect.value === 'band') {
+      xScaleSelect.value = 'linear';
+    }
   } else {
-    xScaleSelect.disabled = false;
-    xScaleSelect.parentElement!.style.opacity = '1';
+    // Scatter/bubble/histogram: continuous scales only
+    if (xScaleSelect.value === 'band' || xScaleSelect.value === 'time') {
+      xScaleSelect.value = 'linear';
+    }
   }
 }
 

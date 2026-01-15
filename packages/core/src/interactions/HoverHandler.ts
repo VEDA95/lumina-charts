@@ -265,8 +265,8 @@ export class HoverHandler extends BaseInteractionHandler {
     point: { x: number; y: number },
     _index: number
   ): string {
-    const xFormatted = this.formatNumber(point.x);
-    const yFormatted = this.formatNumber(point.y);
+    const xFormatted = this.formatValue(point.x);
+    const yFormatted = this.formatValue(point.y);
 
     return `
       <div style="font-weight: 500; margin-bottom: 4px;">${series.name ?? series.id}</div>
@@ -276,13 +276,43 @@ export class HoverHandler extends BaseInteractionHandler {
   }
 
   /**
-   * Format a number for display
+   * Check if a value looks like a timestamp (milliseconds since epoch)
+   * Timestamps are typically between year 2000 (946684800000) and year 2100 (4102444800000)
    */
-  private formatNumber(value: number): string {
-    if (Number.isInteger(value)) {
-      return value.toString();
+  private looksLikeTimestamp(value: number): boolean {
+    // Check if value is in reasonable timestamp range (year 1990 to 2100)
+    const minTs = 631152000000; // 1990-01-01
+    const maxTs = 4102444800000; // 2100-01-01
+    return value >= minTs && value <= maxTs;
+  }
+
+  /**
+   * Format a value for display, auto-detecting timestamps
+   */
+  private formatValue(value: number): string {
+    // Check if this looks like a timestamp
+    if (this.looksLikeTimestamp(value)) {
+      const date = new Date(value);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
-    return value.toFixed(2);
+
+    // Regular number formatting
+    if (Number.isInteger(value)) {
+      return value.toLocaleString();
+    }
+
+    // Format with appropriate precision
+    const absValue = Math.abs(value);
+    if (absValue >= 1000) {
+      return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+    if (absValue >= 1) {
+      return value.toFixed(2);
+    }
+    if (absValue >= 0.01) {
+      return value.toFixed(3);
+    }
+    return value.toExponential(2);
   }
 
   /**

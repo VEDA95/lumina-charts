@@ -57,6 +57,7 @@ export class GridRenderPass implements RenderPass {
   private vertexCount: number = 0;
 
   // Tick positions (set externally from axis renderer)
+  // Stored as numbers (timestamps for Date values)
   private xTicks: number[] = [];
   private yTicks: number[] = [];
 
@@ -96,10 +97,20 @@ export class GridRenderPass implements RenderPass {
 
   /**
    * Set tick positions from axis renderer
+   * Accepts numbers, strings, or Date values (converted to timestamps for positioning)
    */
-  setTicks(xTicks: number[], yTicks: number[]): void {
-    this.xTicks = xTicks;
-    this.yTicks = yTicks;
+  setTicks(xTicks: (number | string | Date)[], yTicks: (number | string | Date)[]): void {
+    // Convert ticks to numbers for positioning calculations
+    this.xTicks = xTicks.map((tick) => {
+      if (tick instanceof Date) return tick.getTime();
+      if (typeof tick === 'number') return tick;
+      return 0; // Skip string ticks (band scale) - they're handled differently
+    });
+    this.yTicks = yTicks.map((tick) => {
+      if (tick instanceof Date) return tick.getTime();
+      if (typeof tick === 'number') return tick;
+      return 0;
+    });
   }
 
   /**

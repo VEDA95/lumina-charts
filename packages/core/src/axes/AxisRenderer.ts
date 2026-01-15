@@ -223,12 +223,25 @@ export class AxisRenderer {
    * Set the data domain for both axes
    */
   setDomain(domain: DataDomain): void {
-    // For continuous scales, set numeric domain
-    if (ScaleFactory.isContinuous(this.xAxisConfig.type ?? 'linear')) {
-      this.xScale.domain(domain.x as [number, number]);
+    const xType = this.xAxisConfig.type ?? 'linear';
+    const yType = this.yAxisConfig.type ?? 'linear';
+
+    // Set domain for continuous and time scales (not band scales)
+    if (xType !== 'band') {
+      if (this.xScale instanceof TimeScale) {
+        // TimeScale expects Date or number (timestamps)
+        this.xScale.domain([domain.x[0], domain.x[1]]);
+      } else {
+        this.xScale.domain(domain.x as [number, number]);
+      }
     }
-    if (ScaleFactory.isContinuous(this.yAxisConfig.type ?? 'linear')) {
-      this.yScale.domain(domain.y as [number, number]);
+
+    if (yType !== 'band') {
+      if (this.yScale instanceof TimeScale) {
+        this.yScale.domain([domain.y[0], domain.y[1]]);
+      } else {
+        this.yScale.domain(domain.y as [number, number]);
+      }
     }
 
     // Update axis generators with new scales
@@ -411,6 +424,19 @@ export class AxisRenderer {
   }
 
   /**
+   * Convert domain value to number (handles Date -> timestamp conversion)
+   */
+  private domainValueToNumber(value: number | string | Date): number {
+    if (value instanceof Date) {
+      return value.getTime();
+    }
+    if (typeof value === 'number') {
+      return value;
+    }
+    return 0;
+  }
+
+  /**
    * Update axis configuration
    */
   updateConfig(xAxis?: AxisConfig, yAxis?: AxisConfig): void {
@@ -429,7 +455,21 @@ export class AxisRenderer {
       const oldDomain = this.xScale.domain();
       const oldRange = this.xScale.range();
       this.xScale = this.createScale(this.xAxisConfig);
-      this.xScale.domain(oldDomain as [number, number]).range(oldRange);
+
+      // Convert domain values to appropriate type for new scale
+      const newType = this.xAxisConfig.type ?? 'linear';
+      if (newType === 'time') {
+        // TimeScale accepts numbers (timestamps) or Date
+        const d0 = this.domainValueToNumber(oldDomain[0]);
+        const d1 = this.domainValueToNumber(oldDomain[1]);
+        this.xScale.domain([d0, d1] as [number, number]);
+      } else if (newType !== 'band') {
+        // Continuous scales need numbers
+        const d0 = this.domainValueToNumber(oldDomain[0]);
+        const d1 = this.domainValueToNumber(oldDomain[1]);
+        this.xScale.domain([d0, d1] as [number, number]);
+      }
+      this.xScale.range(oldRange);
       this.xAxisGenerator = axisBottom(this.getD3Scale(this.xScale) as any);
     }
 
@@ -437,7 +477,19 @@ export class AxisRenderer {
       const oldDomain = this.yScale.domain();
       const oldRange = this.yScale.range();
       this.yScale = this.createScale(this.yAxisConfig);
-      this.yScale.domain(oldDomain as [number, number]).range(oldRange);
+
+      // Convert domain values to appropriate type for new scale
+      const newType = this.yAxisConfig.type ?? 'linear';
+      if (newType === 'time') {
+        const d0 = this.domainValueToNumber(oldDomain[0]);
+        const d1 = this.domainValueToNumber(oldDomain[1]);
+        this.yScale.domain([d0, d1] as [number, number]);
+      } else if (newType !== 'band') {
+        const d0 = this.domainValueToNumber(oldDomain[0]);
+        const d1 = this.domainValueToNumber(oldDomain[1]);
+        this.yScale.domain([d0, d1] as [number, number]);
+      }
+      this.yScale.range(oldRange);
       this.yAxisGenerator = axisLeft(this.getD3Scale(this.yScale) as any);
     }
 

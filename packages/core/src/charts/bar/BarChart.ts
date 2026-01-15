@@ -101,9 +101,20 @@ export class BarChart extends BaseChart {
   private createXAxisConfig(): AxisConfig {
     const baseConfig = this.barOptions.xAxis ?? {};
 
+    // For time scale, don't override the formatter - let D3 handle it
+    if (this.isTimeScale()) {
+      return {
+        ...baseConfig,
+        ticks: {
+          ...baseConfig.ticks,
+          count: baseConfig.ticks?.count ?? 6,
+        },
+      };
+    }
+
+    // For category scale, use custom formatter to show category labels
     return {
       ...baseConfig,
-      // Use custom formatter to show category labels
       formatter: (value: number) => {
         const index = Math.round(value);
         if (index >= 0 && index < this.categories.length) {
@@ -197,14 +208,39 @@ export class BarChart extends BaseChart {
   }
 
   /**
+   * Check if time scale is being used
+   */
+  private isTimeScale(): boolean {
+    return this.barOptions.xAxis?.type === 'time';
+  }
+
+  /**
    * Called when data is updated
    */
   protected onDataUpdate(series: Series[]): void {
-    // Calculate domain based on data
-    const categoryCount = this.categories.length || this.inferCategoryCount(series);
+    let xDomain: [number, number];
 
-    // X domain: -0.5 to categoryCount-0.5 (so bars are centered)
-    const xDomain: [number, number] = [-0.5, categoryCount - 0.5];
+    // Calculate X domain based on scale type
+    if (this.isTimeScale()) {
+      // For time scale, find min/max timestamps from data
+      let minX = Infinity;
+      let maxX = -Infinity;
+      for (const s of series) {
+        if (s.visible === false) continue;
+        for (const point of s.data) {
+          minX = Math.min(minX, point.x);
+          maxX = Math.max(maxX, point.x);
+        }
+      }
+      // Add padding (5% of range on each side)
+      const xRange = maxX - minX || 1;
+      const padding = xRange * 0.05;
+      xDomain = [minX - padding, maxX + padding];
+    } else {
+      // For category/band scale, use index-based domain
+      const categoryCount = this.categories.length || this.inferCategoryCount(series);
+      xDomain = [-0.5, categoryCount - 0.5];
+    }
 
     // Y domain: 0 to max value (with some padding)
     let maxY = 0;
@@ -266,60 +302,131 @@ export class BarChart extends BaseChart {
     const domainWidth = domain.x[1] - domain.x[0];
     const domainHeight = domain.y[1] - domain.y[0];
 
-    // Calculate layout parameters
-    const categoryCount = this.categories.length || this.inferCategoryCount(series);
     const visibleSeries = series.filter((s) => s.visible !== false);
     const seriesCount = visibleSeries.length;
 
-    if (categoryCount === 0 || seriesCount === 0) {
+    if (seriesCount === 0) {
       this.barRenderPass.updateData([]);
       this.barBounds = [];
       return;
     }
 
-    // Gap configuration (in pixels)
-    const groupGap = (this.barOptions.groupGap ?? 20) * this.pixelRatio;
-    const barGap = (this.barOptions.barGap ?? 4) * this.pixelRatio;
-
-    // Calculate bar widths
-    const categoryPixelWidth = plotWidth / categoryCount;
-    const groupWidth = categoryPixelWidth - groupGap;
-    const totalBarGaps = (seriesCount - 1) * barGap;
-    const barWidth = Math.max(1, (groupWidth - totalBarGaps) / seriesCount);
-
     const bars: BarData[] = [];
 
-    // Generate bars for each series and category
-    for (let seriesIndex = 0; seriesIndex < visibleSeries.length; seriesIndex++) {
-      const s = visibleSeries[seriesIndex];
-      const color: RGBAColor =
-        s.style?.color ?? this.barOptions.barColor ?? DEFAULT_COLORS[seriesIndex % DEFAULT_COLORS.length];
+    // Handle time scale vs category scale differently
+    if (this.isTimeScale()) {
+      // Time scale: bars are positioned by their timestamp values
+      // Collect all unique x values to determine bar width
+      const allXValues: number[] = [];
+      for (const s of visibleSeries) {
+        for (const point of s.data) {
+          allXValues.push(point.x);
+        }
+      }
+      allXValues.sort((a, b) => a - b);
 
-      for (const point of s.data) {
-        const categoryIndex = Math.floor(point.x);
-        if (categoryIndex < 0 || categoryIndex >= categoryCount) continue;
+      // Calculate bar width based on minimum interval between points
+      let minInterval = domainWidth;
+      for (let i = 1; i < allXValues.length; i++) {
+        const interval = allXValues[i] - allXValues[i - 1];
+        if (interval > 0) {
+          minInterval = Math.min(minInterval, interval);
+        }
+      }
 
-        // Calculate bar position
-        const categoryCenterX = plotLeft + ((categoryIndex + 0.5 - domain.x[0]) / domainWidth) * plotWidth;
-        const groupStartX = categoryCenterX - groupWidth / 2;
-        const barX = groupStartX + seriesIndex * (barWidth + barGap);
+      // Bar width as fraction of the minimum interval (80%)
+      const barWidthInDomain = minInterval * 0.8;
+      const groupPixelWidth = (barWidthInDomain / domainWidth) * plotWidth;
 
-        // Calculate bar height (value maps to pixels)
-        const normalizedY = (point.y - domain.y[0]) / domainHeight;
-        const barPixelHeight = normalizedY * plotHeight;
+      // Gap configuration (in pixels)
+      const barGap = (this.barOptions.barGap ?? 4) * this.pixelRatio;
+      const totalBarGaps = (seriesCount - 1) * barGap;
+      const barWidth = Math.max(1, (groupPixelWidth - totalBarGaps) / seriesCount);
 
-        // Bar Y position (top of bar, since Y increases downward in pixels)
-        const barY = plotBottom - barPixelHeight;
+      // Generate bars for each series and data point
+      for (let seriesIndex = 0; seriesIndex < visibleSeries.length; seriesIndex++) {
+        const s = visibleSeries[seriesIndex];
+        const color: RGBAColor =
+          s.style?.color ?? this.barOptions.barColor ?? DEFAULT_COLORS[seriesIndex % DEFAULT_COLORS.length];
 
-        bars.push({
-          x: barX,
-          y: barY,
-          width: barWidth,
-          height: barPixelHeight,
-          color,
-          seriesId: s.id,
-          categoryIndex,
-        });
+        for (const point of s.data) {
+          // Convert x value (timestamp) to pixel position
+          const normalizedX = (point.x - domain.x[0]) / domainWidth;
+          const centerX = plotLeft + normalizedX * plotWidth;
+
+          // Calculate bar position within the group
+          const groupStartX = centerX - groupPixelWidth / 2;
+          const barX = groupStartX + seriesIndex * (barWidth + barGap);
+
+          // Calculate bar height (value maps to pixels)
+          const normalizedY = (point.y - domain.y[0]) / domainHeight;
+          const barPixelHeight = normalizedY * plotHeight;
+
+          // Bar Y position (top of bar, since Y increases downward in pixels)
+          const barY = plotBottom - barPixelHeight;
+
+          bars.push({
+            x: barX,
+            y: barY,
+            width: barWidth,
+            height: barPixelHeight,
+            color,
+            seriesId: s.id,
+            categoryIndex: 0, // Not applicable for time scale
+          });
+        }
+      }
+    } else {
+      // Category scale: bars are positioned by category index
+      const categoryCount = this.categories.length || this.inferCategoryCount(series);
+      if (categoryCount === 0) {
+        this.barRenderPass.updateData([]);
+        this.barBounds = [];
+        return;
+      }
+
+      // Gap configuration (in pixels)
+      const groupGap = (this.barOptions.groupGap ?? 20) * this.pixelRatio;
+      const barGap = (this.barOptions.barGap ?? 4) * this.pixelRatio;
+
+      // Calculate bar widths
+      const categoryPixelWidth = plotWidth / categoryCount;
+      const groupWidth = categoryPixelWidth - groupGap;
+      const totalBarGaps = (seriesCount - 1) * barGap;
+      const barWidth = Math.max(1, (groupWidth - totalBarGaps) / seriesCount);
+
+      // Generate bars for each series and category
+      for (let seriesIndex = 0; seriesIndex < visibleSeries.length; seriesIndex++) {
+        const s = visibleSeries[seriesIndex];
+        const color: RGBAColor =
+          s.style?.color ?? this.barOptions.barColor ?? DEFAULT_COLORS[seriesIndex % DEFAULT_COLORS.length];
+
+        for (const point of s.data) {
+          const categoryIndex = Math.floor(point.x);
+          if (categoryIndex < 0 || categoryIndex >= categoryCount) continue;
+
+          // Calculate bar position
+          const categoryCenterX = plotLeft + ((categoryIndex + 0.5 - domain.x[0]) / domainWidth) * plotWidth;
+          const groupStartX = categoryCenterX - groupWidth / 2;
+          const barX = groupStartX + seriesIndex * (barWidth + barGap);
+
+          // Calculate bar height (value maps to pixels)
+          const normalizedY = (point.y - domain.y[0]) / domainHeight;
+          const barPixelHeight = normalizedY * plotHeight;
+
+          // Bar Y position (top of bar, since Y increases downward in pixels)
+          const barY = plotBottom - barPixelHeight;
+
+          bars.push({
+            x: barX,
+            y: barY,
+            width: barWidth,
+            height: barPixelHeight,
+            color,
+            seriesId: s.id,
+            categoryIndex,
+          });
+        }
       }
     }
 
