@@ -12,6 +12,7 @@ import {
   type DataPoint,
   type BubbleDataPoint,
   type BaseChart,
+  type ScaleType,
 } from '@lumina-charts/core';
 
 // DOM elements
@@ -48,6 +49,9 @@ const bubbleOptions = document.getElementById('bubble-options')!;
 const scaleSqrt = document.getElementById('scale-sqrt') as HTMLInputElement;
 const scaleLinear = document.getElementById('scale-linear') as HTMLInputElement;
 const scaleLog = document.getElementById('scale-log') as HTMLInputElement;
+const xScaleSelect = document.getElementById('x-scale-select') as HTMLSelectElement;
+const yScaleSelect = document.getElementById('y-scale-select') as HTMLSelectElement;
+const axisScaleOptions = document.getElementById('axis-scale-options')!;
 
 // FPS tracking
 let frameCount = 0;
@@ -98,19 +102,32 @@ let zoomHandler: ZoomHandler | null = null;
 let selectionHandler: SelectionHandler | null = null;
 let currentPointCount = 1000;
 
-// Chart options
-const chartOptions = {
-  margins: { top: 20, right: 20, bottom: 50, left: 60 },
-  xAxis: {
-    label: 'X Value',
-    ticks: { count: 10 },
-  },
-  yAxis: {
-    label: 'Y Value',
-    ticks: { count: 8 },
-  },
-  gridColor: [0.93, 0.93, 0.93, 1.0] as [number, number, number, number],
-};
+// Get current axis scale types from selectors
+function getXScaleType(): ScaleType {
+  return xScaleSelect.value as ScaleType;
+}
+
+function getYScaleType(): ScaleType {
+  return yScaleSelect.value as ScaleType;
+}
+
+// Chart options (generated dynamically to include current scale types)
+function getChartOptions() {
+  return {
+    margins: { top: 20, right: 20, bottom: 50, left: 60 },
+    xAxis: {
+      label: 'X Value',
+      ticks: { count: 10 },
+      type: getXScaleType(),
+    },
+    yAxis: {
+      label: 'Y Value',
+      ticks: { count: 8 },
+      type: getYScaleType(),
+    },
+    gridColor: [0.93, 0.93, 0.93, 1.0] as [number, number, number, number],
+  };
+}
 
 // Create chart based on type
 function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'): void {
@@ -126,6 +143,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'):
 
   // Clear container
   chartContainer.innerHTML = '';
+
+  const chartOptions = getChartOptions();
 
   if (type === 'scatter') {
     chart = new ScatterChart({
@@ -154,10 +173,12 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'):
         xAxis: {
           label: 'Category',
           ticks: { count: 6 },
+          type: 'linear', // Bar charts use linear scale for categories
         },
         yAxis: {
           label: 'Value',
           ticks: { count: 8 },
+          type: getYScaleType(),
         },
         barGap: 4,
         groupGap: 20,
@@ -172,10 +193,12 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'):
         xAxis: {
           label: 'Value',
           ticks: { count: 10 },
+          type: getXScaleType(),
         },
         yAxis: {
           label: 'Frequency',
           ticks: { count: 8 },
+          type: getYScaleType(),
         },
         binning: { method: 'count', value: 20 },
         barGap: 1,
@@ -197,10 +220,12 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'):
         xAxis: {
           label: 'X Value',
           ticks: { count: 10 },
+          type: getXScaleType(),
         },
         yAxis: {
           label: 'Y Value',
           ticks: { count: 8 },
+          type: getYScaleType(),
         },
         bubbleSize: {
           minSize: 5,
@@ -287,36 +312,71 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'):
   }
 
   currentChartType = type;
+
+  // Update axis scale selector visibility
+  updateAxisScaleVisibility();
 }
 
 // Generate random scatter data
 function generateScatterData(count: number): Series[] {
   const data: DataPoint[] = [];
+  const xScaleType = getXScaleType();
+  const yScaleType = getYScaleType();
+
+  // For log scales, use a different range (1-1000) to show orders of magnitude
+  const useLogX = xScaleType === 'log';
+  const useLogY = yScaleType === 'log';
 
   // Generate clustered data for visual interest
   const clusters = Math.min(5, Math.ceil(count / 1000));
   const pointsPerCluster = Math.floor(count / clusters);
 
   for (let c = 0; c < clusters; c++) {
-    const centerX = Math.random() * 80 + 10;
-    const centerY = Math.random() * 80 + 10;
-    const spread = 5 + Math.random() * 10;
+    let centerX: number;
+    let centerY: number;
+    let spreadX: number;
+    let spreadY: number;
+
+    if (useLogX) {
+      // For log scale: cluster centers at powers of 10
+      centerX = Math.pow(10, 1 + Math.random() * 2); // 10 to 1000
+      spreadX = centerX * 0.3; // 30% spread relative to center
+    } else {
+      centerX = Math.random() * 80 + 10;
+      spreadX = 5 + Math.random() * 10;
+    }
+
+    if (useLogY) {
+      centerY = Math.pow(10, 1 + Math.random() * 2);
+      spreadY = centerY * 0.3;
+    } else {
+      centerY = Math.random() * 80 + 10;
+      spreadY = 5 + Math.random() * 10;
+    }
 
     for (let i = 0; i < pointsPerCluster; i++) {
-      data.push({
-        x: centerX + (Math.random() - 0.5) * spread * 2,
-        y: centerY + (Math.random() - 0.5) * spread * 2,
-      });
+      let x = centerX + (Math.random() - 0.5) * spreadX * 2;
+      let y = centerY + (Math.random() - 0.5) * spreadY * 2;
+
+      // Ensure positive values for log scales
+      if (useLogX) x = Math.max(1, x);
+      if (useLogY) y = Math.max(1, y);
+
+      data.push({ x, y });
     }
   }
 
   // Add remaining points
   const remaining = count - clusters * pointsPerCluster;
   for (let i = 0; i < remaining; i++) {
-    data.push({
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-    });
+    let x = useLogX ? Math.pow(10, Math.random() * 3) : Math.random() * 100; // 1-1000 for log
+    let y = useLogY ? Math.pow(10, Math.random() * 3) : Math.random() * 100;
+
+    // Ensure positive values for log scales
+    if (useLogX) x = Math.max(1, x);
+    if (useLogY) y = Math.max(1, y);
+
+    data.push({ x, y });
   }
 
   return [
@@ -368,6 +428,11 @@ function generateBarData(categoryCount: number): Series[] {
 
 // Generate line chart data (time series style)
 function generateLineData(count: number): Series[] {
+  const xScaleType = getXScaleType();
+  const yScaleType = getYScaleType();
+  const useLogX = xScaleType === 'log';
+  const useLogY = yScaleType === 'log';
+
   // Generate multiple series with different patterns
   const series1: DataPoint[] = [];
   const series2: DataPoint[] = [];
@@ -376,27 +441,39 @@ function generateLineData(count: number): Series[] {
   // Divide points among 3 series
   const pointsPerSeries = Math.floor(count / 3);
 
+  // For log scales, use different ranges
+  const xMin = useLogX ? 1 : 0;
+  const xMax = useLogX ? 1000 : 100;
+  const yCenter = useLogY ? 100 : 50;
+  const yRange = useLogY ? 50 : 20;
+
   // Series 1: Sine wave with noise
-  let y1 = 50;
   for (let i = 0; i < pointsPerSeries; i++) {
-    const x = (i / pointsPerSeries) * 100;
-    y1 = 50 + Math.sin(x * 0.1) * 20 + (Math.random() - 0.5) * 10;
-    series1.push({ x, y: y1 });
+    const t = i / pointsPerSeries;
+    const x = useLogX ? Math.pow(10, t * 3) : t * 100; // 1-1000 for log, 0-100 for linear
+    let y = yCenter + Math.sin(t * Math.PI * 4) * yRange + (Math.random() - 0.5) * (yRange / 2);
+    if (useLogY) y = Math.max(1, y);
+    series1.push({ x, y });
   }
 
   // Series 2: Random walk
-  let y2 = 30;
+  let y2 = useLogY ? 50 : 30;
   for (let i = 0; i < pointsPerSeries; i++) {
-    const x = (i / pointsPerSeries) * 100;
-    y2 += (Math.random() - 0.5) * 2;
-    y2 = Math.max(10, Math.min(90, y2)); // Clamp
+    const t = i / pointsPerSeries;
+    const x = useLogX ? Math.pow(10, t * 3) : t * 100;
+    y2 += (Math.random() - 0.5) * (useLogY ? 10 : 2);
+    y2 = Math.max(useLogY ? 10 : 10, Math.min(useLogY ? 500 : 90, y2));
     series2.push({ x, y: y2 });
   }
 
   // Series 3: Exponential growth with oscillation
   for (let i = 0; i < pointsPerSeries; i++) {
-    const x = (i / pointsPerSeries) * 100;
-    const y3 = 20 + (x / 100) * 50 + Math.sin(x * 0.3) * 10;
+    const t = i / pointsPerSeries;
+    const x = useLogX ? Math.pow(10, t * 3) : t * 100;
+    let y3 = useLogY
+      ? 10 * Math.pow(10, t * 1.5) + Math.sin(t * Math.PI * 6) * 20
+      : 20 + t * 50 + Math.sin(t * Math.PI * 6) * 10;
+    if (useLogY) y3 = Math.max(1, y3);
     series3.push({ x, y: y3 });
   }
 
@@ -425,24 +502,52 @@ function generateLineData(count: number): Series[] {
 // Generate bubble chart data (x, y, z values)
 function generateBubbleData(count: number): Series[] {
   const data: BubbleDataPoint[] = [];
+  const xScaleType = getXScaleType();
+  const yScaleType = getYScaleType();
+
+  // For log scales, use a different range
+  const useLogX = xScaleType === 'log';
+  const useLogY = yScaleType === 'log';
 
   // Generate clustered data with varying z values
   const clusters = Math.min(5, Math.ceil(count / 200));
   const pointsPerCluster = Math.floor(count / clusters);
 
   for (let c = 0; c < clusters; c++) {
-    const centerX = Math.random() * 80 + 10;
-    const centerY = Math.random() * 80 + 10;
-    const spreadX = 5 + Math.random() * 10;
-    const spreadY = 5 + Math.random() * 10;
+    let centerX: number;
+    let centerY: number;
+    let spreadX: number;
+    let spreadY: number;
+
+    if (useLogX) {
+      centerX = Math.pow(10, 1 + Math.random() * 2);
+      spreadX = centerX * 0.3;
+    } else {
+      centerX = Math.random() * 80 + 10;
+      spreadX = 5 + Math.random() * 10;
+    }
+
+    if (useLogY) {
+      centerY = Math.pow(10, 1 + Math.random() * 2);
+      spreadY = centerY * 0.3;
+    } else {
+      centerY = Math.random() * 80 + 10;
+      spreadY = 5 + Math.random() * 10;
+    }
 
     // Each cluster has a base z-value with variation
     const baseZ = Math.random() * 900 + 100; // 100 - 1000
 
     for (let i = 0; i < pointsPerCluster; i++) {
+      let x = centerX + (Math.random() - 0.5) * spreadX * 2;
+      let y = centerY + (Math.random() - 0.5) * spreadY * 2;
+
+      if (useLogX) x = Math.max(1, x);
+      if (useLogY) y = Math.max(1, y);
+
       data.push({
-        x: centerX + (Math.random() - 0.5) * spreadX * 2,
-        y: centerY + (Math.random() - 0.5) * spreadY * 2,
+        x,
+        y,
         z: baseZ * (0.5 + Math.random()), // 50% to 150% of base
       });
     }
@@ -451,9 +556,15 @@ function generateBubbleData(count: number): Series[] {
   // Add remaining points as outliers
   const remaining = count - clusters * pointsPerCluster;
   for (let i = 0; i < remaining; i++) {
+    let x = useLogX ? Math.pow(10, Math.random() * 3) : Math.random() * 100;
+    let y = useLogY ? Math.pow(10, Math.random() * 3) : Math.random() * 100;
+
+    if (useLogX) x = Math.max(1, x);
+    if (useLogY) y = Math.max(1, y);
+
     data.push({
-      x: Math.random() * 100,
-      y: Math.random() * 100,
+      x,
+      y,
       z: Math.random() * 1000 + 50,
     });
   }
@@ -834,6 +945,30 @@ function updateBubbleScale(): void {
 scaleSqrt.addEventListener('change', updateBubbleScale);
 scaleLinear.addEventListener('change', updateBubbleScale);
 scaleLog.addEventListener('change', updateBubbleScale);
+
+// Axis scale change handlers
+function updateAxisScales(): void {
+  // Recreate chart with new scale settings
+  createChart(currentChartType);
+  loadData(currentPointCount);
+
+  console.log(`Axis scales updated: X=${getXScaleType()}, Y=${getYScaleType()}`);
+}
+
+xScaleSelect.addEventListener('change', updateAxisScales);
+yScaleSelect.addEventListener('change', updateAxisScales);
+
+// Hide axis scale options for bar charts (they use category x-axis)
+function updateAxisScaleVisibility(): void {
+  if (currentChartType === 'bar') {
+    // For bar charts, only show Y scale (X is always category)
+    xScaleSelect.disabled = true;
+    xScaleSelect.parentElement!.style.opacity = '0.5';
+  } else {
+    xScaleSelect.disabled = false;
+    xScaleSelect.parentElement!.style.opacity = '1';
+  }
+}
 
 // Initialize
 createChart('scatter');

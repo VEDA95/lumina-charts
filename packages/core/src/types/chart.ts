@@ -3,6 +3,7 @@
  */
 
 import type { DataDomain, Series, DataPoint } from './data.js';
+import type { ScaleType, ScaleConfig } from './scale.js';
 
 /**
  * Chart margin configuration
@@ -201,10 +202,12 @@ export interface AxisConfig {
   grid?: boolean | GridConfig;
   /** Axis domain (auto-calculated if not provided) */
   domain?: [number, number];
-  /** Scale type */
-  type?: 'linear' | 'log' | 'time' | 'band';
+  /** Scale type (shorthand) */
+  type?: ScaleType;
+  /** Detailed scale configuration (overrides type) */
+  scale?: ScaleConfig;
   /** Value formatter */
-  formatter?: (value: number) => string;
+  formatter?: (value: number | string | Date) => string;
 }
 
 export interface TickConfig {

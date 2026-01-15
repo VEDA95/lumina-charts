@@ -2,10 +2,11 @@
  * Axis renderer using D3 for scales and SVG rendering
  */
 
-import { scaleLinear, type ScaleLinear } from 'd3-scale';
 import { axisBottom, axisLeft, type Axis } from 'd3-axis';
 import { select, type Selection } from 'd3-selection';
-import type { Margins, DataDomain, AxisConfig } from '../types/index.js';
+import type { Margins, DataDomain, AxisConfig, ScaleType } from '../types/index.js';
+import { ScaleFactory, LinearScale, LogScale, PowScale, SymlogScale, TimeScale, BandScale } from '../scales/index.js';
+import type { Scale, ContinuousScale } from '../types/scale.js';
 
 /**
  * Configuration for the axis renderer
@@ -39,13 +40,13 @@ export class AxisRenderer {
   private xLabelGroup: Selection<SVGTextElement, unknown, null, undefined> | null = null;
   private yLabelGroup: Selection<SVGTextElement, unknown, null, undefined> | null = null;
 
-  // D3 scales
-  private xScale: ScaleLinear<number, number>;
-  private yScale: ScaleLinear<number, number>;
+  // Scales (wrapped D3 scales)
+  private xScale: Scale<number | string | Date, number>;
+  private yScale: Scale<number | string | Date, number>;
 
   // D3 axis generators
-  private xAxisGenerator: Axis<number>;
-  private yAxisGenerator: Axis<number>;
+  private xAxisGenerator: Axis<number | string | Date>;
+  private yAxisGenerator: Axis<number | string | Date>;
 
   // Configuration
   private xAxisConfig: AxisConfig;
@@ -79,13 +80,17 @@ export class AxisRenderer {
     // Create D3 selection
     this.svgSelection = select(this.svg);
 
-    // Initialize scales with default domain
-    this.xScale = scaleLinear().domain([0, 1]).range([0, 100]);
-    this.yScale = scaleLinear().domain([0, 1]).range([100, 0]);
+    // Initialize scales based on axis config
+    this.xScale = this.createScale(this.xAxisConfig);
+    this.yScale = this.createScale(this.yAxisConfig);
 
-    // Initialize axis generators
-    this.xAxisGenerator = axisBottom<number>(this.xScale);
-    this.yAxisGenerator = axisLeft<number>(this.yScale);
+    // Set default domains
+    this.xScale.domain([0, 1]).range([0, 100]);
+    this.yScale.domain([0, 1]).range([100, 0]);
+
+    // Initialize axis generators with underlying D3 scales
+    this.xAxisGenerator = axisBottom(this.getD3Scale(this.xScale) as any);
+    this.yAxisGenerator = axisLeft(this.getD3Scale(this.yScale) as any);
 
     // Create axis groups
     this.xAxisGroup = this.svgSelection
@@ -104,6 +109,49 @@ export class AxisRenderer {
 
     // Apply axis configuration
     this.applyAxisConfig();
+  }
+
+  /**
+   * Create a scale based on axis configuration
+   */
+  private createScale(axisConfig: AxisConfig): Scale<number | string | Date, number> {
+    // Use detailed scale config if provided
+    if (axisConfig.scale) {
+      return ScaleFactory.create(axisConfig.scale) as Scale<number | string | Date, number>;
+    }
+
+    // Otherwise use type shorthand or default to linear
+    const type: ScaleType = axisConfig.type ?? 'linear';
+    return ScaleFactory.fromType(type) as Scale<number | string | Date, number>;
+  }
+
+  /**
+   * Get the underlying D3 scale from a wrapped scale
+   */
+  private getD3Scale(scale: Scale<number | string | Date, number>): unknown {
+    if (scale instanceof LinearScale) {
+      return scale.getD3Scale();
+    }
+    if (scale instanceof LogScale) {
+      return scale.getD3Scale();
+    }
+    if (scale instanceof PowScale) {
+      return scale.getD3Scale();
+    }
+    if (scale instanceof SymlogScale) {
+      return scale.getD3Scale();
+    }
+    if (scale instanceof TimeScale) {
+      return scale.getD3Scale();
+    }
+    if (scale instanceof BandScale) {
+      return scale.getD3Scale();
+    }
+    // Fallback - try to access getD3Scale if it exists
+    if ('getD3Scale' in scale && typeof scale.getD3Scale === 'function') {
+      return (scale as any).getD3Scale();
+    }
+    return scale;
   }
 
   /**
@@ -175,8 +223,29 @@ export class AxisRenderer {
    * Set the data domain for both axes
    */
   setDomain(domain: DataDomain): void {
-    this.xScale.domain(domain.x);
-    this.yScale.domain(domain.y);
+    // For continuous scales, set numeric domain
+    if (ScaleFactory.isContinuous(this.xAxisConfig.type ?? 'linear')) {
+      this.xScale.domain(domain.x as [number, number]);
+    }
+    if (ScaleFactory.isContinuous(this.yAxisConfig.type ?? 'linear')) {
+      this.yScale.domain(domain.y as [number, number]);
+    }
+
+    // Update axis generators with new scales
+    this.xAxisGenerator.scale(this.getD3Scale(this.xScale) as any);
+    this.yAxisGenerator.scale(this.getD3Scale(this.yScale) as any);
+  }
+
+  /**
+   * Set categories for band/category scales
+   */
+  setCategories(axis: 'x' | 'y', categories: string[]): void {
+    const scale = axis === 'x' ? this.xScale : this.yScale;
+    if (scale instanceof BandScale) {
+      scale.domain(categories);
+      const generator = axis === 'x' ? this.xAxisGenerator : this.yAxisGenerator;
+      generator.scale(scale.getD3Scale() as any);
+    }
   }
 
   /**
@@ -197,6 +266,10 @@ export class AxisRenderer {
 
     this.xScale.range([plotLeft, plotRight]);
     this.yScale.range([plotBottom, plotTop]); // Y is inverted in SVG
+
+    // Update axis generators with new scales
+    this.xAxisGenerator.scale(this.getD3Scale(this.xScale) as any);
+    this.yAxisGenerator.scale(this.getD3Scale(this.yScale) as any);
 
     // Update axis positions
     this.xAxisGroup.attr('transform', `translate(0, ${plotBottom})`);
@@ -242,49 +315,63 @@ export class AxisRenderer {
   /**
    * Get tick values for grid lines
    */
-  getXTicks(): number[] {
+  getXTicks(): (number | string | Date)[] {
     return this.xScale.ticks(this.xAxisConfig.ticks?.count);
   }
 
   /**
    * Get tick values for grid lines
    */
-  getYTicks(): number[] {
+  getYTicks(): (number | string | Date)[] {
     return this.yScale.ticks(this.yAxisConfig.ticks?.count);
+  }
+
+  /**
+   * Get the X scale type
+   */
+  getXScaleType(): ScaleType {
+    return this.xAxisConfig.type ?? 'linear';
+  }
+
+  /**
+   * Get the Y scale type
+   */
+  getYScaleType(): ScaleType {
+    return this.yAxisConfig.type ?? 'linear';
   }
 
   /**
    * Convert pixel X to data X
    */
-  pixelToDataX(pixelX: number): number {
+  pixelToDataX(pixelX: number): number | string | Date {
     return this.xScale.invert(pixelX);
   }
 
   /**
    * Convert pixel Y to data Y
    */
-  pixelToDataY(pixelY: number): number {
+  pixelToDataY(pixelY: number): number | string | Date {
     return this.yScale.invert(pixelY);
   }
 
   /**
    * Convert data X to pixel X
    */
-  dataToPixelX(dataX: number): number {
-    return this.xScale(dataX);
+  dataToPixelX(dataX: number | string | Date): number {
+    return this.xScale.scale(dataX);
   }
 
   /**
    * Convert data Y to pixel Y
    */
-  dataToPixelY(dataY: number): number {
-    return this.yScale(dataY);
+  dataToPixelY(dataY: number | string | Date): number {
+    return this.yScale.scale(dataY);
   }
 
   /**
    * Convert pixel coordinates to data coordinates
    */
-  pixelToData(pixelX: number, pixelY: number): { x: number; y: number } {
+  pixelToData(pixelX: number, pixelY: number): { x: number | string | Date; y: number | string | Date } {
     return {
       x: this.pixelToDataX(pixelX),
       y: this.pixelToDataY(pixelY),
@@ -294,7 +381,7 @@ export class AxisRenderer {
   /**
    * Convert data coordinates to pixel coordinates
    */
-  dataToPixel(dataX: number, dataY: number): { x: number; y: number } {
+  dataToPixel(dataX: number | string | Date, dataY: number | string | Date): { x: number; y: number } {
     return {
       x: this.dataToPixelX(dataX),
       y: this.dataToPixelY(dataY),
@@ -304,14 +391,14 @@ export class AxisRenderer {
   /**
    * Get the X scale
    */
-  getXScale(): ScaleLinear<number, number> {
+  getXScale(): Scale<number | string | Date, number> {
     return this.xScale;
   }
 
   /**
    * Get the Y scale
    */
-  getYScale(): ScaleLinear<number, number> {
+  getYScale(): Scale<number | string | Date, number> {
     return this.yScale;
   }
 
@@ -327,12 +414,33 @@ export class AxisRenderer {
    * Update axis configuration
    */
   updateConfig(xAxis?: AxisConfig, yAxis?: AxisConfig): void {
+    const xScaleTypeChanged = xAxis && (xAxis.type !== this.xAxisConfig.type || xAxis.scale !== this.xAxisConfig.scale);
+    const yScaleTypeChanged = yAxis && (yAxis.type !== this.yAxisConfig.type || yAxis.scale !== this.yAxisConfig.scale);
+
     if (xAxis) {
       this.xAxisConfig = xAxis;
     }
     if (yAxis) {
       this.yAxisConfig = yAxis;
     }
+
+    // Recreate scales if type changed
+    if (xScaleTypeChanged) {
+      const oldDomain = this.xScale.domain();
+      const oldRange = this.xScale.range();
+      this.xScale = this.createScale(this.xAxisConfig);
+      this.xScale.domain(oldDomain as [number, number]).range(oldRange);
+      this.xAxisGenerator = axisBottom(this.getD3Scale(this.xScale) as any);
+    }
+
+    if (yScaleTypeChanged) {
+      const oldDomain = this.yScale.domain();
+      const oldRange = this.yScale.range();
+      this.yScale = this.createScale(this.yAxisConfig);
+      this.yScale.domain(oldDomain as [number, number]).range(oldRange);
+      this.yAxisGenerator = axisLeft(this.getD3Scale(this.yScale) as any);
+    }
+
     this.applyAxisConfig();
   }
 

@@ -61,6 +61,17 @@ export type {
 export { AxisRenderer } from './axes/index.js';
 export type { AxisRendererConfig } from './axes/index.js';
 
+// Scales
+export {
+  LinearScale,
+  LogScale,
+  PowScale,
+  SymlogScale,
+  TimeScale,
+  BandScale,
+  ScaleFactory,
+} from './scales/index.js';
+
 // Interactions
 export {
   BaseInteractionHandler,
@@ -155,6 +166,20 @@ export type {
   ThemeColors,
   ThemeStyleConfig,
   RGBAColor,
+  // Scale types
+  ScaleType,
+  ScaleConfig,
+  Scale,
+  ContinuousScale,
+  TimeScale as TimeScaleType,
+  BandScale as BandScaleType,
+  LinearScaleConfig,
+  LogScaleConfig,
+  PowScaleConfig,
+  SqrtScaleConfig,
+  SymlogScaleConfig,
+  TimeScaleConfig,
+  BandScaleConfig,
 } from './types/index.js';
 
 export { DEFAULT_THEME_STYLES } from './types/index.js';

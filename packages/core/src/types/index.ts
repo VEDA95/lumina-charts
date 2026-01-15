@@ -16,6 +16,24 @@ export type {
   ProcessedSeriesData,
 } from './data.js';
 
+// Scale types
+export type {
+  ScaleType,
+  ScaleConfig,
+  BaseScaleConfig,
+  LinearScaleConfig,
+  LogScaleConfig,
+  PowScaleConfig,
+  SqrtScaleConfig,
+  SymlogScaleConfig,
+  TimeScaleConfig,
+  BandScaleConfig,
+  Scale,
+  ContinuousScale,
+  TimeScale,
+  BandScale,
+} from './scale.js';
+
 // Renderer types
 export type {
   WebGLRendererConfig,
