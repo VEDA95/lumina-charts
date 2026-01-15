@@ -7,6 +7,7 @@ import type {
   Series,
   DataPoint,
   BubbleDataPoint,
+  RGBAColor,
 } from '../../types/index.js';
 import { ScatterChart, type ScatterChartOptions, type ScatterChartConfig } from '../scatter/ScatterChart.js';
 
@@ -30,6 +31,8 @@ export interface BubbleSizeConfig {
 export interface BubbleChartOptions extends Omit<ScatterChartOptions, 'pointSize'> {
   /** Configuration for bubble sizing */
   bubbleSize?: BubbleSizeConfig;
+  /** Bubble opacity (0-1, default: 0.7 for semi-transparency) */
+  bubbleOpacity?: number;
 }
 
 /**
@@ -43,28 +46,48 @@ export interface BubbleChartConfig {
 }
 
 /**
+ * Default colors for bubble series (with alpha for semi-transparency)
+ */
+const DEFAULT_BUBBLE_COLORS: RGBAColor[] = [
+  [0.4, 0.4, 0.8, 0.7], // Blue
+  [0.8, 0.4, 0.4, 0.7], // Red
+  [0.4, 0.8, 0.4, 0.7], // Green
+  [0.8, 0.6, 0.2, 0.7], // Orange
+  [0.6, 0.4, 0.8, 0.7], // Purple
+];
+
+/**
  * Bubble chart for visualizing 3-dimensional data (x, y, size)
  * Each point's size represents a third variable (z-value)
  */
 export class BubbleChart extends ScatterChart {
   private bubbleSizeConfig: BubbleSizeConfig;
+  private bubbleOpacity: number;
   private zDomain: [number, number] = [0, 1];
 
   constructor(config: BubbleChartConfig) {
     const bubbleConfig = config.options?.bubbleSize ?? {};
+    const opacity = config.options?.bubbleOpacity ?? 0.7;
 
-    // Create ScatterChart config with our size accessor
+    // Create ScatterChart config with our size accessor and semi-transparent colors
     const scatterConfig: ScatterChartConfig = {
       container: config.container,
       options: {
         ...config.options,
         // Override pointSize with our z-value mapper
         pointSize: (point: DataPoint) => this.getPointSize(point),
+        // Override pointColor with semi-transparent default
+        pointColor: config.options?.pointColor ?? ((point: DataPoint, index: number, series: Series) => {
+          // Use series index to pick color, apply opacity
+          const baseColor = DEFAULT_BUBBLE_COLORS[0];
+          return [baseColor[0], baseColor[1], baseColor[2], opacity] as RGBAColor;
+        }),
       },
     };
 
     super(scatterConfig);
 
+    this.bubbleOpacity = opacity;
     this.bubbleSizeConfig = {
       minSize: 4,
       maxSize: 40,
@@ -165,6 +188,9 @@ export class BubbleChart extends ScatterChart {
     if (this.series.length > 0) {
       this.onDataUpdate(this.series);
     }
+
+    // Render with new settings
+    this.render();
   }
 
   /**

@@ -714,7 +714,7 @@ function updateLODStats(): void {
     return;
   }
 
-  const chartWithLOD = chart as ScatterChart | LineChart;
+  const chartWithLOD = chart as ScatterChart | LineChart | BubbleChart;
   const lodManager = chart.getLODManager();
   let visiblePoints = currentPointCount;
   let displayLodLevel = 0;
@@ -723,6 +723,15 @@ function updateLODStats(): void {
     const levels = lodManager.getLevels('main');
     if (levels && levels.length > 0) {
       const lodLevel = chartWithLOD.getLODLevel('main');
+      displayLodLevel = lodLevel;
+      if (levels[lodLevel]) {
+        visiblePoints = levels[lodLevel].pointCount;
+      }
+    }
+  } else if (currentChartType === 'bubble') {
+    const levels = lodManager.getLevels('bubbles');
+    if (levels && levels.length > 0) {
+      const lodLevel = chartWithLOD.getLODLevel('bubbles');
       displayLodLevel = lodLevel;
       if (levels[lodLevel]) {
         visiblePoints = levels[lodLevel].pointCount;
@@ -769,7 +778,7 @@ lodToggle.addEventListener('change', () => {
     return;
   }
 
-  const chartWithLOD = chart as ScatterChart | LineChart;
+  const chartWithLOD = chart as ScatterChart | LineChart | BubbleChart;
   chartWithLOD.setLODEnabled(lodToggle.checked);
   updateLODStats();
 
@@ -811,6 +820,20 @@ smoothToggle.addEventListener('change', () => {
 
   console.log(`Smooth curves ${smoothToggle.checked ? 'enabled' : 'disabled'}`);
 });
+
+// Bubble scale toggle handlers
+function updateBubbleScale(): void {
+  if (!bubbleChart) return;
+
+  const scale = scaleLinear.checked ? 'linear' : scaleLog.checked ? 'log' : 'sqrt';
+  bubbleChart.setBubbleSize({ scale });
+
+  console.log(`Bubble scale set to: ${scale}`);
+}
+
+scaleSqrt.addEventListener('change', updateBubbleScale);
+scaleLinear.addEventListener('change', updateBubbleScale);
+scaleLog.addEventListener('change', updateBubbleScale);
 
 // Initialize
 createChart('scatter');
