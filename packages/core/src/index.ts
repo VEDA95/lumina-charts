@@ -12,10 +12,12 @@ export {
   BarChart,
   HistogramChart,
   BubbleChart,
+  PieChart,
   GridRenderPass,
   BarRenderPass,
   HistogramRenderPass,
   HistogramLinePass,
+  PieRenderPass,
   binData,
   sturgesBinCount,
   scottBinCount,
@@ -55,6 +57,7 @@ export type {
   BubbleChartOptions,
   BubbleChartConfig,
   BubbleSizeConfig,
+  PieRenderPassConfig,
 } from './charts/index.js';
 
 // Axes
@@ -108,6 +111,7 @@ export { POINT_SHADER, POINT_WITH_STROKE_SHADER, INSTANCED_POINT_SHADER } from '
 export { LINE_SHADER, SIMPLE_LINE_SHADER, DASHED_LINE_SHADER, AREA_SHADER, GRADIENT_AREA_SHADER } from './shaders/line.js';
 export { GRID_SHADER, DASHED_GRID_SHADER, CROSSHAIR_SHADER, SELECTION_SHADER, ZOOM_LENS_SHADER } from './shaders/grid.js';
 export { BAR_SHADER, BAR_WITH_BORDER_SHADER } from './shaders/bar.js';
+export { PIE_SHADER, PIE_WITH_BORDER_SHADER } from './shaders/pie.js';
 export { buildVertexShader, buildFragmentShader } from './shaders/common.js';
 
 // Types
@@ -180,6 +184,13 @@ export type {
   SymlogScaleConfig,
   TimeScaleConfig,
   BandScaleConfig,
+  // Pie chart types
+  PieSlice,
+  PieLabelConfig,
+  PieChartOptions,
+  PieChartConfig,
+  PieSliceEvent,
+  PieVertexData,
 } from './types/index.js';
 
 export { DEFAULT_THEME_STYLES } from './types/index.js';

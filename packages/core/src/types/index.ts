@@ -90,3 +90,13 @@ export type {
 } from './theme.js';
 
 export { DEFAULT_THEME_STYLES } from './theme.js';
+
+// Pie chart types
+export type {
+  PieSlice,
+  PieLabelConfig,
+  PieChartOptions,
+  PieChartConfig,
+  PieSliceEvent,
+  PieVertexData,
+} from './pie.js';

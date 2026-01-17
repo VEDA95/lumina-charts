@@ -4,6 +4,7 @@ import {
   BarChart,
   HistogramChart,
   BubbleChart,
+  PieChart,
   PanHandler,
   ZoomHandler,
   HoverHandler,
@@ -22,6 +23,7 @@ const btnLine = document.getElementById('btn-line')!;
 const btnBar = document.getElementById('btn-bar')!;
 const btnHistogram = document.getElementById('btn-histogram')!;
 const btnBubble = document.getElementById('btn-bubble')!;
+const btnPie = document.getElementById('btn-pie')!;
 const btn1k = document.getElementById('btn-1k')!;
 const btn10k = document.getElementById('btn-10k')!;
 const btn100k = document.getElementById('btn-100k')!;
@@ -49,6 +51,10 @@ const bubbleOptions = document.getElementById('bubble-options')!;
 const scaleSqrt = document.getElementById('scale-sqrt') as HTMLInputElement;
 const scaleLinear = document.getElementById('scale-linear') as HTMLInputElement;
 const scaleLog = document.getElementById('scale-log') as HTMLInputElement;
+const pieOptions = document.getElementById('pie-options')!;
+const pieFull = document.getElementById('pie-full') as HTMLInputElement;
+const pieDonut = document.getElementById('pie-donut') as HTMLInputElement;
+const pieExplode = document.getElementById('pie-explode') as HTMLInputElement;
 const xScaleSelect = document.getElementById('x-scale-select') as HTMLSelectElement;
 const yScaleSelect = document.getElementById('y-scale-select') as HTMLSelectElement;
 const axisScaleOptions = document.getElementById('axis-scale-options')!;
@@ -92,12 +98,13 @@ requestAnimationFrame(updateFps);
 setInterval(updateMemory, 1000);
 
 // Current chart type and instance
-let currentChartType: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' = 'scatter';
+let currentChartType: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' = 'scatter';
 let chart: BaseChart | null = null;
 let barChart: BarChart | null = null; // Keep reference for setCategories
 let histogramChart: HistogramChart | null = null; // Keep reference for setValues
 let lineChart: LineChart | null = null; // Keep reference for line options
 let bubbleChart: BubbleChart | null = null; // Keep reference for bubble options
+let pieChart: PieChart | null = null; // Keep reference for pie options
 let zoomHandler: ZoomHandler | null = null;
 let selectionHandler: SelectionHandler | null = null;
 let currentPointCount = 1000;
@@ -130,7 +137,7 @@ function getChartOptions() {
 }
 
 // Create chart based on type
-function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'): void {
+function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie'): void {
   // Dispose existing chart
   if (chart) {
     chart.dispose();
@@ -139,6 +146,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'):
     histogramChart = null;
     lineChart = null;
     bubbleChart = null;
+    pieChart = null;
   }
 
   // Clear container
@@ -246,18 +254,45 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'):
       },
     });
     chart = bubbleChart;
+  } else if (type === 'pie') {
+    // Get current pie style settings
+    const innerRadius = pieDonut.checked ? 0.5 : 0;
+    const explodeOffset = pieExplode.checked ? 15 : 0;
+
+    pieChart = new PieChart({
+      container: chartContainer,
+      options: {
+        innerRadius,
+        outerRadius: 0.8,
+        startAngle: -90,
+        padAngle: 0,
+        explodeOffset,
+        labels: {
+          position: 'outside',
+          showPercentage: true,
+          minAngleForLabel: 15,
+        },
+        hoverBrighten: 1.15,
+      },
+    });
+    chart = pieChart;
   }
 
-  // Add interactions
-  const panHandler = new PanHandler({ momentum: true });
-  zoomHandler = new ZoomHandler({ speed: 1.5 });
-  const hoverHandler = new HoverHandler({ showTooltip: true });
-  selectionHandler = new SelectionHandler({ mode: 'single' });
+  // Add interactions (except for pie chart which handles its own)
+  if (type !== 'pie') {
+    const panHandler = new PanHandler({ momentum: true });
+    zoomHandler = new ZoomHandler({ speed: 1.5 });
+    const hoverHandler = new HoverHandler({ showTooltip: true });
+    selectionHandler = new SelectionHandler({ mode: 'single' });
 
-  chart?.addInteraction(panHandler);
-  chart?.addInteraction(zoomHandler);
-  chart?.addInteraction(hoverHandler);
-  chart?.addInteraction(selectionHandler);
+    chart?.addInteraction(panHandler);
+    chart?.addInteraction(zoomHandler);
+    chart?.addInteraction(hoverHandler);
+    chart?.addInteraction(selectionHandler);
+  } else {
+    zoomHandler = null;
+    selectionHandler = null;
+  }
 
   // Event listeners
   chart?.on('hover', (e) => {
@@ -313,6 +348,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'):
   btnBar.className = type === 'bar' ? activeClass : inactiveClass;
   btnHistogram.className = type === 'histogram' ? activeClass : inactiveClass;
   btnBubble.className = type === 'bubble' ? activeClass : inactiveClass;
+  btnPie.className = type === 'pie' ? activeClass : inactiveClass;
 
   // Show/hide histogram options
   if (type === 'histogram') {
@@ -333,6 +369,13 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble'):
     bubbleOptions.classList.remove('hidden');
   } else {
     bubbleOptions.classList.add('hidden');
+  }
+
+  // Show/hide pie options
+  if (type === 'pie') {
+    pieOptions.classList.remove('hidden');
+  } else {
+    pieOptions.classList.add('hidden');
   }
 
   currentChartType = type;
@@ -652,6 +695,41 @@ function generateBubbleData(count: number): Series[] {
   ];
 }
 
+// Pie chart data labels
+const PIE_CATEGORIES = [
+  'Electronics',
+  'Clothing',
+  'Food & Beverage',
+  'Home & Garden',
+  'Sports',
+  'Automotive',
+  'Books',
+  'Health & Beauty',
+];
+
+// Generate pie chart data
+function generatePieData(sliceCount: number): Series[] {
+  const data: (DataPoint & { label: string })[] = [];
+
+  // Generate random values for each slice
+  for (let i = 0; i < sliceCount; i++) {
+    const value = Math.random() * 900 + 100; // 100-1000
+    data.push({
+      x: i,
+      y: value,
+      label: PIE_CATEGORIES[i % PIE_CATEGORIES.length],
+    });
+  }
+
+  return [
+    {
+      id: 'pie',
+      name: 'Sales by Category',
+      data,
+    },
+  ];
+}
+
 // Generate histogram data (values from a normal-ish distribution)
 function generateHistogramData(count: number): number[] {
   const values: number[] = [];
@@ -693,9 +771,14 @@ function loadData(count: number): void {
   // For bar charts, count represents category count (max 12)
   const barCategoryCount = Math.min(12, Math.max(3, Math.floor(count / 100)));
 
+  // For pie charts, use a fixed number of slices (3-8)
+  const pieSliceCount = Math.min(8, Math.max(3, Math.floor(count / 200)));
+
   const displayCount = currentChartType === 'bar'
     ? barCategoryCount + ' categories'
-    : count.toLocaleString() + ' points';
+    : currentChartType === 'pie'
+      ? pieSliceCount + ' slices'
+      : count.toLocaleString() + ' points';
   console.log(`\n========== Loading ${displayCount} (${currentChartType}) ==========`);
 
   // Data generation
@@ -732,6 +815,9 @@ function loadData(count: number): void {
     for (const s of series) {
       totalPoints += s.data.length;
     }
+  } else if (currentChartType === 'pie') {
+    series = generatePieData(pieSliceCount);
+    totalPoints = pieSliceCount;
   }
 
   const genTime = performance.now() - startGen;
@@ -816,6 +902,13 @@ btnBubble.addEventListener('click', () => {
   }
 });
 
+btnPie.addEventListener('click', () => {
+  if (currentChartType !== 'pie') {
+    createChart('pie');
+    loadData(currentPointCount);
+  }
+});
+
 // Button handlers
 btn1k.addEventListener('click', () => loadData(1_000));
 btn10k.addEventListener('click', () => loadData(10_000));
@@ -876,7 +969,7 @@ function updateLODStats(): void {
     return;
   }
 
-  // Bar and histogram charts don't have LOD
+  // Bar charts don't have LOD
   if (currentChartType === 'bar') {
     statLod.textContent = 'N/A';
     statLod.style.color = '#666';
@@ -886,6 +979,18 @@ function updateLODStats(): void {
       total += s.data.length;
     }
     statVisible.textContent = total.toLocaleString();
+    return;
+  }
+
+  // Pie charts don't have LOD
+  if (currentChartType === 'pie') {
+    statLod.textContent = 'N/A';
+    statLod.style.color = '#666';
+    // Display slice count for pie chart
+    if (pieChart) {
+      const slices = pieChart.getSlices();
+      statVisible.textContent = slices.length.toString() + ' slices';
+    }
     return;
   }
 
@@ -958,8 +1063,8 @@ function updateLODStats(): void {
 lodToggle.addEventListener('change', () => {
   if (!chart) return;
 
-  // Bar and histogram charts don't have LOD
-  if (currentChartType === 'bar' || currentChartType === 'histogram') {
+  // Bar, histogram, and pie charts don't have LOD
+  if (currentChartType === 'bar' || currentChartType === 'histogram' || currentChartType === 'pie') {
     console.log(`${currentChartType} charts do not support LOD`);
     return;
   }
@@ -1021,6 +1126,29 @@ scaleSqrt.addEventListener('change', updateBubbleScale);
 scaleLinear.addEventListener('change', updateBubbleScale);
 scaleLog.addEventListener('change', updateBubbleScale);
 
+// Pie style toggle handlers
+function updatePieStyle(): void {
+  if (!pieChart) return;
+
+  const innerRadius = pieDonut.checked ? 0.5 : 0;
+  pieChart.updateOptions({ innerRadius });
+
+  console.log(`Pie style set to: ${pieDonut.checked ? 'donut' : 'pie'}`);
+}
+
+function updatePieExplode(): void {
+  if (!pieChart) return;
+
+  const explodeOffset = pieExplode.checked ? 15 : 0;
+  pieChart.updateOptions({ explodeOffset });
+
+  console.log(`Explode effect ${pieExplode.checked ? 'enabled' : 'disabled'}`);
+}
+
+pieFull.addEventListener('change', updatePieStyle);
+pieDonut.addEventListener('change', updatePieStyle);
+pieExplode.addEventListener('change', updatePieExplode);
+
 // Axis scale change handlers
 function updateAxisScales(): void {
   // Recreate chart with new scale settings
@@ -1035,6 +1163,13 @@ yScaleSelect.addEventListener('change', updateAxisScales);
 
 // Update axis scale options based on chart type
 function updateAxisScaleVisibility(): void {
+  // Pie charts don't use axes
+  if (currentChartType === 'pie') {
+    axisScaleOptions.classList.add('hidden');
+    return;
+  }
+
+  axisScaleOptions.classList.remove('hidden');
   xScaleSelect.disabled = false;
   xScaleSelect.parentElement!.style.opacity = '1';
 
