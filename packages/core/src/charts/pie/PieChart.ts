@@ -513,6 +513,105 @@ export class PieChart extends BaseChart {
   }
 
   /**
+   * Get labels as an image for export
+   */
+  protected async getAxesImage(): Promise<HTMLImageElement | null> {
+    if (!this.labelsContainer || this.slices.length === 0) {
+      return null;
+    }
+
+    const { width, height } = this.state.viewport;
+    const cssWidth = width / this.pixelRatio;
+    const cssHeight = height / this.pixelRatio;
+
+    // Create SVG with labels
+    const labelConfig = this.pieOptions.labels;
+    if (labelConfig?.position === 'none') {
+      return null;
+    }
+
+    const position = labelConfig?.position ?? 'outside';
+    const showPercentage = labelConfig?.showPercentage ?? true;
+    const showValue = labelConfig?.showValue ?? false;
+    const minAngle = ((labelConfig?.minAngleForLabel ?? 10) * Math.PI) / 180;
+    const fontSize = labelConfig?.fontSize ?? 12;
+    const fontColor = labelConfig?.fontColor ?? '#333';
+
+    // Build SVG content
+    let svgContent = '';
+
+    for (const slice of this.slices) {
+      // Skip small slices
+      const sliceAngle = slice.endAngle - slice.startAngle;
+      if (sliceAngle < minAngle) continue;
+
+      // Calculate label position
+      const midAngle = (slice.startAngle + slice.endAngle) / 2;
+
+      let labelRadius: number;
+      if (position === 'inside') {
+        labelRadius = (this.innerRadius + this.outerRadius) / 2;
+      } else {
+        const outsideDistance = labelConfig?.outsideDistance ?? 1.15;
+        labelRadius = this.outerRadius * outsideDistance;
+      }
+
+      const labelX = this.centerX + Math.cos(midAngle) * labelRadius;
+      const labelY = this.centerY + Math.sin(midAngle) * labelRadius;
+
+      // Format label text
+      let text = '';
+      if (labelConfig?.formatter) {
+        text = labelConfig.formatter(slice);
+      } else {
+        text = slice.label;
+        if (showPercentage) {
+          text += ` (${(slice.percentage * 100).toFixed(1)}%)`;
+        }
+        if (showValue) {
+          text += ` - ${slice.value.toLocaleString()}`;
+        }
+      }
+
+      // Convert to CSS pixels
+      const cssX = labelX / this.pixelRatio;
+      const cssY = labelY / this.pixelRatio;
+
+      // Determine text anchor based on angle
+      let textAnchor = 'middle';
+      if (position === 'outside') {
+        if (midAngle > -Math.PI / 2 && midAngle < Math.PI / 2) {
+          textAnchor = 'start';
+        } else {
+          textAnchor = 'end';
+        }
+      }
+
+      // Escape text for SVG
+      const escapedText = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      svgContent += `<text x="${cssX}" y="${cssY}" text-anchor="${textAnchor}" dominant-baseline="middle" font-family="system-ui, sans-serif" font-size="${fontSize}" fill="${fontColor}">${escapedText}</text>\n`;
+    }
+
+    if (!svgContent) {
+      return null;
+    }
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cssWidth}" height="${cssHeight}">${svgContent}</svg>`;
+
+    // Convert SVG to image
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+  }
+
+  /**
    * Clean up resources
    */
   dispose(): void {
