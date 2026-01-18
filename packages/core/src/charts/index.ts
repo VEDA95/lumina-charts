@@ -14,3 +14,4 @@ export * from './bar/index.js';
 export * from './histogram/index.js';
 export * from './bubble/index.js';
 export * from './pie/index.js';
+export * from './candlestick/index.js';

@@ -5,6 +5,7 @@ import {
   HistogramChart,
   BubbleChart,
   PieChart,
+  CandlestickChart,
   PanHandler,
   ZoomHandler,
   HoverHandler,
@@ -12,6 +13,7 @@ import {
   type Series,
   type DataPoint,
   type BubbleDataPoint,
+  type OHLCDataPoint,
   type BaseChart,
   type ScaleType,
 } from '@lumina-charts/core';
@@ -24,6 +26,7 @@ const btnBar = document.getElementById('btn-bar')!;
 const btnHistogram = document.getElementById('btn-histogram')!;
 const btnBubble = document.getElementById('btn-bubble')!;
 const btnPie = document.getElementById('btn-pie')!;
+const btnCandlestick = document.getElementById('btn-candlestick')!;
 const btn1k = document.getElementById('btn-1k')!;
 const btn10k = document.getElementById('btn-10k')!;
 const btn100k = document.getElementById('btn-100k')!;
@@ -55,6 +58,9 @@ const pieOptions = document.getElementById('pie-options')!;
 const pieFull = document.getElementById('pie-full') as HTMLInputElement;
 const pieDonut = document.getElementById('pie-donut') as HTMLInputElement;
 const pieExplode = document.getElementById('pie-explode') as HTMLInputElement;
+const candlestickOptions = document.getElementById('candlestick-options')!;
+const candlestickVertical = document.getElementById('candlestick-vertical') as HTMLInputElement;
+const candlestickHorizontal = document.getElementById('candlestick-horizontal') as HTMLInputElement;
 const xScaleSelect = document.getElementById('x-scale-select') as HTMLSelectElement;
 const yScaleSelect = document.getElementById('y-scale-select') as HTMLSelectElement;
 const axisScaleOptions = document.getElementById('axis-scale-options')!;
@@ -98,13 +104,14 @@ requestAnimationFrame(updateFps);
 setInterval(updateMemory, 1000);
 
 // Current chart type and instance
-let currentChartType: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' = 'scatter';
+let currentChartType: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' | 'candlestick' = 'scatter';
 let chart: BaseChart | null = null;
 let barChart: BarChart | null = null; // Keep reference for setCategories
 let histogramChart: HistogramChart | null = null; // Keep reference for setValues
 let lineChart: LineChart | null = null; // Keep reference for line options
 let bubbleChart: BubbleChart | null = null; // Keep reference for bubble options
 let pieChart: PieChart | null = null; // Keep reference for pie options
+let candlestickChart: CandlestickChart | null = null; // Keep reference for candlestick options
 let zoomHandler: ZoomHandler | null = null;
 let selectionHandler: SelectionHandler | null = null;
 let currentPointCount = 1000;
@@ -137,7 +144,7 @@ function getChartOptions() {
 }
 
 // Create chart based on type
-function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie'): void {
+function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' | 'candlestick'): void {
   // Dispose existing chart
   if (chart) {
     chart.dispose();
@@ -147,6 +154,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     lineChart = null;
     bubbleChart = null;
     pieChart = null;
+    candlestickChart = null;
   }
 
   // Clear container
@@ -276,19 +284,51 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
       },
     });
     chart = pieChart;
+  } else if (type === 'candlestick') {
+    // Get current orientation setting
+    const orientation = candlestickHorizontal.checked ? 'horizontal' : 'vertical';
+
+    candlestickChart = new CandlestickChart({
+      container: chartContainer,
+      options: {
+        orientation,
+        margins: { top: 20, right: 20, bottom: 50, left: 60 },
+        xAxis: {
+          label: orientation === 'vertical' ? 'Date' : 'Price',
+          ticks: { count: 8 },
+        },
+        yAxis: {
+          label: orientation === 'vertical' ? 'Price' : 'Date',
+          ticks: { count: 8 },
+        },
+        gridColor: [0.93, 0.93, 0.93, 1.0] as [number, number, number, number],
+        upColor: [0.2, 0.7, 0.3, 1.0],
+        downColor: [0.8, 0.2, 0.2, 1.0],
+        candleWidth: 0.8,
+        wickWidth: 1,
+        hoverBrighten: 1.2,
+      },
+    });
+    chart = candlestickChart;
   }
 
   // Add interactions (except for pie chart which handles its own)
   if (type !== 'pie') {
     const panHandler = new PanHandler({ momentum: true });
     zoomHandler = new ZoomHandler({ speed: 1.5 });
-    const hoverHandler = new HoverHandler({ showTooltip: true });
-    selectionHandler = new SelectionHandler({ mode: 'single' });
 
     chart?.addInteraction(panHandler);
     chart?.addInteraction(zoomHandler);
-    chart?.addInteraction(hoverHandler);
-    chart?.addInteraction(selectionHandler);
+
+    // Candlestick has its own hover handling, other charts use HoverHandler
+    if (type !== 'candlestick') {
+      const hoverHandler = new HoverHandler({ showTooltip: true });
+      selectionHandler = new SelectionHandler({ mode: 'single' });
+      chart?.addInteraction(hoverHandler);
+      chart?.addInteraction(selectionHandler);
+    } else {
+      selectionHandler = null;
+    }
   } else {
     zoomHandler = null;
     selectionHandler = null;
@@ -349,6 +389,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
   btnHistogram.className = type === 'histogram' ? activeClass : inactiveClass;
   btnBubble.className = type === 'bubble' ? activeClass : inactiveClass;
   btnPie.className = type === 'pie' ? activeClass : inactiveClass;
+  btnCandlestick.className = type === 'candlestick' ? activeClass : inactiveClass;
 
   // Show/hide histogram options
   if (type === 'histogram') {
@@ -376,6 +417,13 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     pieOptions.classList.remove('hidden');
   } else {
     pieOptions.classList.add('hidden');
+  }
+
+  // Show/hide candlestick options
+  if (type === 'candlestick') {
+    candlestickOptions.classList.remove('hidden');
+  } else {
+    candlestickOptions.classList.add('hidden');
   }
 
   currentChartType = type;
@@ -730,6 +778,43 @@ function generatePieData(sliceCount: number): Series[] {
   ];
 }
 
+// Generate candlestick (OHLC) data
+function generateCandlestickData(count: number): Series[] {
+  const data: (OHLCDataPoint & DataPoint)[] = [];
+  let price = 100; // Starting price
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  for (let i = 0; i < count; i++) {
+    const timestamp = now - (count - i) * dayMs;
+    const volatility = 2 + Math.random() * 3;
+
+    const open = price;
+    const change = (Math.random() - 0.5) * volatility * 2;
+    const close = open + change;
+    const high = Math.max(open, close) + Math.random() * volatility;
+    const low = Math.min(open, close) - Math.random() * volatility;
+
+    data.push({
+      x: timestamp,
+      y: close,
+      open,
+      high,
+      low,
+    });
+
+    price = close; // Next candle opens at previous close
+  }
+
+  return [
+    {
+      id: 'ohlc',
+      name: 'Price',
+      data,
+    },
+  ];
+}
+
 // Generate histogram data (values from a normal-ish distribution)
 function generateHistogramData(count: number): number[] {
   const values: number[] = [];
@@ -774,11 +859,16 @@ function loadData(count: number): void {
   // For pie charts, use a fixed number of slices (3-8)
   const pieSliceCount = Math.min(8, Math.max(3, Math.floor(count / 200)));
 
+  // For candlestick charts, use 30-200 candles (days of data)
+  const candleCount = Math.min(200, Math.max(30, Math.floor(count / 50)));
+
   const displayCount = currentChartType === 'bar'
     ? barCategoryCount + ' categories'
     : currentChartType === 'pie'
       ? pieSliceCount + ' slices'
-      : count.toLocaleString() + ' points';
+      : currentChartType === 'candlestick'
+        ? candleCount + ' candles'
+        : count.toLocaleString() + ' points';
   console.log(`\n========== Loading ${displayCount} (${currentChartType}) ==========`);
 
   // Data generation
@@ -818,6 +908,9 @@ function loadData(count: number): void {
   } else if (currentChartType === 'pie') {
     series = generatePieData(pieSliceCount);
     totalPoints = pieSliceCount;
+  } else if (currentChartType === 'candlestick') {
+    series = generateCandlestickData(candleCount);
+    totalPoints = candleCount;
   }
 
   const genTime = performance.now() - startGen;
@@ -909,6 +1002,13 @@ btnPie.addEventListener('click', () => {
   }
 });
 
+btnCandlestick.addEventListener('click', () => {
+  if (currentChartType !== 'candlestick') {
+    createChart('candlestick');
+    loadData(currentPointCount);
+  }
+});
+
 // Button handlers
 btn1k.addEventListener('click', () => loadData(1_000));
 btn10k.addEventListener('click', () => loadData(10_000));
@@ -994,6 +1094,18 @@ function updateLODStats(): void {
     return;
   }
 
+  // Candlestick charts don't have LOD
+  if (currentChartType === 'candlestick') {
+    statLod.textContent = 'N/A';
+    statLod.style.color = '#666';
+    // Display candle count for candlestick chart
+    if (candlestickChart) {
+      const candles = candlestickChart.getCandles();
+      statVisible.textContent = candles.length.toString() + ' candles';
+    }
+    return;
+  }
+
   if (currentChartType === 'histogram') {
     statLod.textContent = 'N/A';
     statLod.style.color = '#666';
@@ -1063,8 +1175,8 @@ function updateLODStats(): void {
 lodToggle.addEventListener('change', () => {
   if (!chart) return;
 
-  // Bar, histogram, and pie charts don't have LOD
-  if (currentChartType === 'bar' || currentChartType === 'histogram' || currentChartType === 'pie') {
+  // Bar, histogram, pie, and candlestick charts don't have LOD
+  if (currentChartType === 'bar' || currentChartType === 'histogram' || currentChartType === 'pie' || currentChartType === 'candlestick') {
     console.log(`${currentChartType} charts do not support LOD`);
     return;
   }
@@ -1149,6 +1261,19 @@ pieFull.addEventListener('change', updatePieStyle);
 pieDonut.addEventListener('change', updatePieStyle);
 pieExplode.addEventListener('change', updatePieExplode);
 
+// Candlestick orientation toggle handlers
+function updateCandlestickOrientation(): void {
+  if (!candlestickChart) return;
+
+  const orientation = candlestickHorizontal.checked ? 'horizontal' : 'vertical';
+  candlestickChart.updateOptions({ orientation });
+
+  console.log(`Candlestick orientation set to: ${orientation}`);
+}
+
+candlestickVertical.addEventListener('change', updateCandlestickOrientation);
+candlestickHorizontal.addEventListener('change', updateCandlestickOrientation);
+
 // Axis scale change handlers
 function updateAxisScales(): void {
   // Recreate chart with new scale settings
@@ -1163,8 +1288,8 @@ yScaleSelect.addEventListener('change', updateAxisScales);
 
 // Update axis scale options based on chart type
 function updateAxisScaleVisibility(): void {
-  // Pie charts don't use axes
-  if (currentChartType === 'pie') {
+  // Pie and candlestick charts don't use the standard axis scale selectors
+  if (currentChartType === 'pie' || currentChartType === 'candlestick') {
     axisScaleOptions.classList.add('hidden');
     return;
   }

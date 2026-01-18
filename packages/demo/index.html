@@ -46,6 +46,12 @@
       >
         Pie Chart
       </button>
+      <button
+        id="btn-candlestick"
+        class="cursor-pointer rounded-md bg-gray-400 px-4 py-2 text-sm text-white hover:bg-gray-500"
+      >
+        Candlestick
+      </button>
     </div>
 
     <div class="mb-5 flex flex-wrap gap-2">
@@ -194,6 +200,17 @@
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" id="pie-explode" class="h-4 w-4" />
           <span class="text-sm text-gray-600">Explode on Select</span>
+        </label>
+      </div>
+      <div id="candlestick-options" class="mt-3 flex items-center gap-4 flex-wrap hidden">
+        <span class="text-sm font-medium text-gray-700">Orientation:</span>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="candlestick-orientation" id="candlestick-vertical" checked class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Vertical (Traditional)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="candlestick-orientation" id="candlestick-horizontal" class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Horizontal</span>
         </label>
       </div>
       <div id="axis-scale-options" class="mt-3 flex items-center gap-6 flex-wrap">

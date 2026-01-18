@@ -13,11 +13,13 @@ export {
   HistogramChart,
   BubbleChart,
   PieChart,
+  CandlestickChart,
   GridRenderPass,
   BarRenderPass,
   HistogramRenderPass,
   HistogramLinePass,
   PieRenderPass,
+  CandlestickRenderPass,
   binData,
   sturgesBinCount,
   scottBinCount,
@@ -58,6 +60,7 @@ export type {
   BubbleChartConfig,
   BubbleSizeConfig,
   PieRenderPassConfig,
+  CandlestickRenderPassConfig,
 } from './charts/index.js';
 
 // Axes
@@ -112,6 +115,7 @@ export { LINE_SHADER, SIMPLE_LINE_SHADER, DASHED_LINE_SHADER, AREA_SHADER, GRADI
 export { GRID_SHADER, DASHED_GRID_SHADER, CROSSHAIR_SHADER, SELECTION_SHADER, ZOOM_LENS_SHADER } from './shaders/grid.js';
 export { BAR_SHADER, BAR_WITH_BORDER_SHADER } from './shaders/bar.js';
 export { PIE_SHADER, PIE_WITH_BORDER_SHADER } from './shaders/pie.js';
+export { CANDLESTICK_BODY_SHADER, CANDLESTICK_WICK_SHADER, CANDLESTICK_BODY_BORDER_SHADER } from './shaders/candlestick.js';
 export { buildVertexShader, buildFragmentShader } from './shaders/common.js';
 
 // Types
@@ -191,6 +195,14 @@ export type {
   PieChartConfig,
   PieSliceEvent,
   PieVertexData,
+  // Candlestick chart types
+  OHLCDataPoint,
+  Candle,
+  CandlestickOrientation,
+  CandlestickChartOptions,
+  CandlestickChartConfig,
+  CandleEvent,
+  CandlestickVertexData,
 } from './types/index.js';
 
 export { DEFAULT_THEME_STYLES } from './types/index.js';

@@ -100,3 +100,14 @@ export type {
   PieSliceEvent,
   PieVertexData,
 } from './pie.js';
+
+// Candlestick chart types
+export type {
+  OHLCDataPoint,
+  Candle,
+  CandlestickOrientation,
+  CandlestickChartOptions,
+  CandlestickChartConfig,
+  CandleEvent,
+  CandlestickVertexData,
+} from './candlestick.js';
