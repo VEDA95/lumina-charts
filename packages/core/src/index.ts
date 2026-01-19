@@ -14,12 +14,14 @@ export {
   BubbleChart,
   PieChart,
   CandlestickChart,
+  BoxplotChart,
   GridRenderPass,
   BarRenderPass,
   HistogramRenderPass,
   HistogramLinePass,
   PieRenderPass,
   CandlestickRenderPass,
+  BoxplotRenderPass,
   binData,
   sturgesBinCount,
   scottBinCount,
@@ -61,6 +63,7 @@ export type {
   BubbleSizeConfig,
   PieRenderPassConfig,
   CandlestickRenderPassConfig,
+  BoxplotRenderPassConfig,
 } from './charts/index.js';
 
 // Axes
@@ -116,6 +119,7 @@ export { GRID_SHADER, DASHED_GRID_SHADER, CROSSHAIR_SHADER, SELECTION_SHADER, ZO
 export { BAR_SHADER, BAR_WITH_BORDER_SHADER } from './shaders/bar.js';
 export { PIE_SHADER, PIE_WITH_BORDER_SHADER } from './shaders/pie.js';
 export { CANDLESTICK_BODY_SHADER, CANDLESTICK_WICK_SHADER, CANDLESTICK_BODY_BORDER_SHADER } from './shaders/candlestick.js';
+export { BOXPLOT_BOX_SHADER, BOXPLOT_LINE_SHADER, BOXPLOT_OUTLIER_SHADER } from './shaders/boxplot.js';
 export { buildVertexShader, buildFragmentShader } from './shaders/common.js';
 
 // Types
@@ -203,6 +207,14 @@ export type {
   CandlestickChartConfig,
   CandleEvent,
   CandlestickVertexData,
+  // Boxplot chart types
+  QuartileDataPoint,
+  Boxplot,
+  BoxplotOrientation,
+  BoxplotChartOptions,
+  BoxplotChartConfig,
+  BoxplotEvent,
+  BoxplotVertexData,
 } from './types/index.js';
 
 export { DEFAULT_THEME_STYLES } from './types/index.js';

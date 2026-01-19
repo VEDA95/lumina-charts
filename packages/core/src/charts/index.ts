@@ -15,3 +15,4 @@ export * from './histogram/index.js';
 export * from './bubble/index.js';
 export * from './pie/index.js';
 export * from './candlestick/index.js';
+export * from './boxplot/index.js';

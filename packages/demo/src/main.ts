@@ -6,6 +6,7 @@ import {
   BubbleChart,
   PieChart,
   CandlestickChart,
+  BoxplotChart,
   PanHandler,
   ZoomHandler,
   HoverHandler,
@@ -14,6 +15,7 @@ import {
   type DataPoint,
   type BubbleDataPoint,
   type OHLCDataPoint,
+  type QuartileDataPoint,
   type BaseChart,
   type ScaleType,
 } from '@lumina-charts/core';
@@ -27,6 +29,7 @@ const btnHistogram = document.getElementById('btn-histogram')!;
 const btnBubble = document.getElementById('btn-bubble')!;
 const btnPie = document.getElementById('btn-pie')!;
 const btnCandlestick = document.getElementById('btn-candlestick')!;
+const btnBoxplot = document.getElementById('btn-boxplot')!;
 const btn1k = document.getElementById('btn-1k')!;
 const btn10k = document.getElementById('btn-10k')!;
 const btn100k = document.getElementById('btn-100k')!;
@@ -61,6 +64,9 @@ const pieExplode = document.getElementById('pie-explode') as HTMLInputElement;
 const candlestickOptions = document.getElementById('candlestick-options')!;
 const candlestickVertical = document.getElementById('candlestick-vertical') as HTMLInputElement;
 const candlestickHorizontal = document.getElementById('candlestick-horizontal') as HTMLInputElement;
+const boxplotOptions = document.getElementById('boxplot-options')!;
+const boxplotVertical = document.getElementById('boxplot-vertical') as HTMLInputElement;
+const boxplotHorizontal = document.getElementById('boxplot-horizontal') as HTMLInputElement;
 const xScaleSelect = document.getElementById('x-scale-select') as HTMLSelectElement;
 const yScaleSelect = document.getElementById('y-scale-select') as HTMLSelectElement;
 const axisScaleOptions = document.getElementById('axis-scale-options')!;
@@ -104,7 +110,7 @@ requestAnimationFrame(updateFps);
 setInterval(updateMemory, 1000);
 
 // Current chart type and instance
-let currentChartType: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' | 'candlestick' = 'scatter';
+let currentChartType: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' | 'candlestick' | 'boxplot' = 'scatter';
 let chart: BaseChart | null = null;
 let barChart: BarChart | null = null; // Keep reference for setCategories
 let histogramChart: HistogramChart | null = null; // Keep reference for setValues
@@ -112,6 +118,7 @@ let lineChart: LineChart | null = null; // Keep reference for line options
 let bubbleChart: BubbleChart | null = null; // Keep reference for bubble options
 let pieChart: PieChart | null = null; // Keep reference for pie options
 let candlestickChart: CandlestickChart | null = null; // Keep reference for candlestick options
+let boxplotChart: BoxplotChart | null = null; // Keep reference for boxplot options
 let zoomHandler: ZoomHandler | null = null;
 let selectionHandler: SelectionHandler | null = null;
 let currentPointCount = 1000;
@@ -144,7 +151,7 @@ function getChartOptions() {
 }
 
 // Create chart based on type
-function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' | 'candlestick'): void {
+function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' | 'candlestick' | 'boxplot'): void {
   // Dispose existing chart
   if (chart) {
     chart.dispose();
@@ -155,6 +162,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     bubbleChart = null;
     pieChart = null;
     candlestickChart = null;
+    boxplotChart = null;
   }
 
   // Clear container
@@ -310,6 +318,35 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
       },
     });
     chart = candlestickChart;
+  } else if (type === 'boxplot') {
+    // Get current orientation setting
+    const orientation = boxplotHorizontal.checked ? 'horizontal' : 'vertical';
+
+    boxplotChart = new BoxplotChart({
+      container: chartContainer,
+      options: {
+        orientation,
+        margins: { top: 20, right: 20, bottom: 50, left: 60 },
+        xAxis: {
+          label: orientation === 'vertical' ? 'Category' : 'Value',
+          ticks: { count: 8 },
+        },
+        yAxis: {
+          label: orientation === 'vertical' ? 'Value' : 'Category',
+          ticks: { count: 8 },
+        },
+        gridColor: [0.93, 0.93, 0.93, 1.0] as [number, number, number, number],
+        boxColor: [0.4, 0.6, 0.9, 1.0],
+        medianColor: [0.9, 0.4, 0.2, 1.0],
+        whiskerColor: [0.3, 0.3, 0.3, 1.0],
+        outlierColor: [0.8, 0.2, 0.2, 1.0],
+        boxWidth: 0.6,
+        whiskerWidth: 1,
+        outlierSize: 4,
+        hoverBrighten: 1.2,
+      },
+    });
+    chart = boxplotChart;
   }
 
   // Add interactions (except for pie chart which handles its own)
@@ -320,8 +357,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     chart?.addInteraction(panHandler);
     chart?.addInteraction(zoomHandler);
 
-    // Candlestick has its own hover handling, other charts use HoverHandler
-    if (type !== 'candlestick') {
+    // Candlestick and boxplot have their own hover handling, other charts use HoverHandler
+    if (type !== 'candlestick' && type !== 'boxplot') {
       const hoverHandler = new HoverHandler({ showTooltip: true });
       selectionHandler = new SelectionHandler({ mode: 'single' });
       chart?.addInteraction(hoverHandler);
@@ -390,6 +427,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
   btnBubble.className = type === 'bubble' ? activeClass : inactiveClass;
   btnPie.className = type === 'pie' ? activeClass : inactiveClass;
   btnCandlestick.className = type === 'candlestick' ? activeClass : inactiveClass;
+  btnBoxplot.className = type === 'boxplot' ? activeClass : inactiveClass;
 
   // Show/hide histogram options
   if (type === 'histogram') {
@@ -424,6 +462,13 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     candlestickOptions.classList.remove('hidden');
   } else {
     candlestickOptions.classList.add('hidden');
+  }
+
+  // Show/hide boxplot options
+  if (type === 'boxplot') {
+    boxplotOptions.classList.remove('hidden');
+  } else {
+    boxplotOptions.classList.add('hidden');
   }
 
   currentChartType = type;
@@ -815,6 +860,55 @@ function generateCandlestickData(count: number): Series[] {
   ];
 }
 
+// Boxplot category labels
+const BOXPLOT_CATEGORIES = ['Group A', 'Group B', 'Group C', 'Group D', 'Group E', 'Group F', 'Group G', 'Group H'];
+
+// Generate boxplot (quartile) data
+function generateBoxplotData(categoryCount: number): Series[] {
+  const data: (QuartileDataPoint & DataPoint)[] = [];
+
+  for (let i = 0; i < categoryCount; i++) {
+    // Generate random distribution statistics
+    const center = 50 + Math.random() * 30;
+    const spread = 10 + Math.random() * 20;
+
+    const min = Math.max(0, center - spread - Math.random() * 10);
+    const q1 = center - spread * 0.5;
+    const median = center;
+    const q3 = center + spread * 0.5;
+    const max = center + spread + Math.random() * 10;
+
+    // Generate some outliers
+    const outliers: number[] = [];
+    if (Math.random() > 0.5) {
+      outliers.push(Math.max(0, min - Math.random() * 15));
+    }
+    if (Math.random() > 0.5) {
+      outliers.push(max + Math.random() * 15);
+    }
+    if (Math.random() > 0.7) {
+      outliers.push(max + Math.random() * 20 + 10);
+    }
+
+    data.push({
+      x: i,
+      y: median,
+      min,
+      q1,
+      median,
+      q3,
+      max,
+      outliers,
+    });
+  }
+
+  return [{
+    id: 'boxplot',
+    name: 'Distribution',
+    data,
+  }];
+}
+
 // Generate histogram data (values from a normal-ish distribution)
 function generateHistogramData(count: number): number[] {
   const values: number[] = [];
@@ -862,13 +956,18 @@ function loadData(count: number): void {
   // For candlestick charts, use 30-200 candles (days of data)
   const candleCount = Math.min(200, Math.max(30, Math.floor(count / 50)));
 
+  // For boxplot charts, use 3-8 categories
+  const boxplotCategoryCount = Math.min(8, Math.max(3, Math.floor(count / 200)));
+
   const displayCount = currentChartType === 'bar'
     ? barCategoryCount + ' categories'
     : currentChartType === 'pie'
       ? pieSliceCount + ' slices'
       : currentChartType === 'candlestick'
         ? candleCount + ' candles'
-        : count.toLocaleString() + ' points';
+        : currentChartType === 'boxplot'
+          ? boxplotCategoryCount + ' boxplots'
+          : count.toLocaleString() + ' points';
   console.log(`\n========== Loading ${displayCount} (${currentChartType}) ==========`);
 
   // Data generation
@@ -911,6 +1010,13 @@ function loadData(count: number): void {
   } else if (currentChartType === 'candlestick') {
     series = generateCandlestickData(candleCount);
     totalPoints = candleCount;
+  } else if (currentChartType === 'boxplot') {
+    series = generateBoxplotData(boxplotCategoryCount);
+    // Set category labels for the boxplot chart
+    if (boxplotChart) {
+      boxplotChart.setCategories(BOXPLOT_CATEGORIES.slice(0, boxplotCategoryCount));
+    }
+    totalPoints = boxplotCategoryCount;
   }
 
   const genTime = performance.now() - startGen;
@@ -1005,6 +1111,13 @@ btnPie.addEventListener('click', () => {
 btnCandlestick.addEventListener('click', () => {
   if (currentChartType !== 'candlestick') {
     createChart('candlestick');
+    loadData(currentPointCount);
+  }
+});
+
+btnBoxplot.addEventListener('click', () => {
+  if (currentChartType !== 'boxplot') {
+    createChart('boxplot');
     loadData(currentPointCount);
   }
 });
@@ -1106,6 +1219,18 @@ function updateLODStats(): void {
     return;
   }
 
+  // Boxplot charts don't have LOD
+  if (currentChartType === 'boxplot') {
+    statLod.textContent = 'N/A';
+    statLod.style.color = '#666';
+    // Display boxplot count for boxplot chart
+    if (boxplotChart) {
+      const boxplots = boxplotChart.getBoxplots();
+      statVisible.textContent = boxplots.length.toString() + ' boxplots';
+    }
+    return;
+  }
+
   if (currentChartType === 'histogram') {
     statLod.textContent = 'N/A';
     statLod.style.color = '#666';
@@ -1175,8 +1300,8 @@ function updateLODStats(): void {
 lodToggle.addEventListener('change', () => {
   if (!chart) return;
 
-  // Bar, histogram, pie, and candlestick charts don't have LOD
-  if (currentChartType === 'bar' || currentChartType === 'histogram' || currentChartType === 'pie' || currentChartType === 'candlestick') {
+  // Bar, histogram, pie, candlestick, and boxplot charts don't have LOD
+  if (currentChartType === 'bar' || currentChartType === 'histogram' || currentChartType === 'pie' || currentChartType === 'candlestick' || currentChartType === 'boxplot') {
     console.log(`${currentChartType} charts do not support LOD`);
     return;
   }
@@ -1274,6 +1399,19 @@ function updateCandlestickOrientation(): void {
 candlestickVertical.addEventListener('change', updateCandlestickOrientation);
 candlestickHorizontal.addEventListener('change', updateCandlestickOrientation);
 
+// Boxplot orientation toggle handlers
+function updateBoxplotOrientation(): void {
+  if (!boxplotChart) return;
+
+  const orientation = boxplotHorizontal.checked ? 'horizontal' : 'vertical';
+  boxplotChart.updateOptions({ orientation });
+
+  console.log(`Boxplot orientation set to: ${orientation}`);
+}
+
+boxplotVertical.addEventListener('change', updateBoxplotOrientation);
+boxplotHorizontal.addEventListener('change', updateBoxplotOrientation);
+
 // Axis scale change handlers
 function updateAxisScales(): void {
   // Recreate chart with new scale settings
@@ -1288,8 +1426,8 @@ yScaleSelect.addEventListener('change', updateAxisScales);
 
 // Update axis scale options based on chart type
 function updateAxisScaleVisibility(): void {
-  // Pie and candlestick charts don't use the standard axis scale selectors
-  if (currentChartType === 'pie' || currentChartType === 'candlestick') {
+  // Pie, candlestick, and boxplot charts don't use the standard axis scale selectors
+  if (currentChartType === 'pie' || currentChartType === 'candlestick' || currentChartType === 'boxplot') {
     axisScaleOptions.classList.add('hidden');
     return;
   }

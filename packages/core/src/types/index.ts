@@ -111,3 +111,14 @@ export type {
   CandleEvent,
   CandlestickVertexData,
 } from './candlestick.js';
+
+// Boxplot chart types
+export type {
+  QuartileDataPoint,
+  Boxplot,
+  BoxplotOrientation,
+  BoxplotChartOptions,
+  BoxplotChartConfig,
+  BoxplotEvent,
+  BoxplotVertexData,
+} from './boxplot.js';

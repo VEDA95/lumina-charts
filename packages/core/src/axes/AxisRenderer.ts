@@ -165,8 +165,12 @@ export class AxisRenderer {
     if (this.xAxisConfig.ticks?.size) {
       this.xAxisGenerator.tickSize(this.xAxisConfig.ticks.size);
     }
-    if (this.xAxisConfig.formatter) {
-      this.xAxisGenerator.tickFormat((d) => this.xAxisConfig.formatter!(d as number));
+    // Always set tickFormat - use custom formatter or reset to default (null)
+    if (this.xAxisConfig.formatter && typeof this.xAxisConfig.formatter === 'function') {
+      const xFormatter = this.xAxisConfig.formatter;
+      this.xAxisGenerator.tickFormat((d) => xFormatter(d as number));
+    } else {
+      this.xAxisGenerator.tickFormat(null);
     }
 
     // Y-axis configuration
@@ -176,8 +180,12 @@ export class AxisRenderer {
     if (this.yAxisConfig.ticks?.size) {
       this.yAxisGenerator.tickSize(this.yAxisConfig.ticks.size);
     }
-    if (this.yAxisConfig.formatter) {
-      this.yAxisGenerator.tickFormat((d) => this.yAxisConfig.formatter!(d as number));
+    // Always set tickFormat - use custom formatter or reset to default (null)
+    if (this.yAxisConfig.formatter && typeof this.yAxisConfig.formatter === 'function') {
+      const yFormatter = this.yAxisConfig.formatter;
+      this.yAxisGenerator.tickFormat((d) => yFormatter(d as number));
+    } else {
+      this.yAxisGenerator.tickFormat(null);
     }
   }
 
