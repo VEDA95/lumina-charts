@@ -58,6 +58,18 @@
       >
         Boxplot
       </button>
+      <button
+        id="btn-heatmap"
+        class="cursor-pointer rounded-md bg-gray-400 px-4 py-2 text-sm text-white hover:bg-gray-500"
+      >
+        Heatmap
+      </button>
+      <button
+        id="btn-network"
+        class="cursor-pointer rounded-md bg-gray-400 px-4 py-2 text-sm text-white hover:bg-gray-500"
+      >
+        Network
+      </button>
     </div>
 
     <div class="mb-5 flex flex-wrap gap-2">
@@ -228,6 +240,44 @@
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="radio" name="boxplot-orientation" id="boxplot-horizontal" class="h-4 w-4" />
           <span class="text-sm text-gray-600">Horizontal</span>
+        </label>
+      </div>
+      <div id="heatmap-options" class="mt-3 flex items-center gap-4 flex-wrap hidden">
+        <span class="text-sm font-medium text-gray-700">Color Scale:</span>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="heatmap-colorscale" id="heatmap-viridis" checked class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Viridis</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="heatmap-colorscale" id="heatmap-sequential" class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Sequential Blue</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="heatmap-colorscale" id="heatmap-diverging" class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Diverging</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="heatmap-labels" class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Show Labels</span>
+        </label>
+      </div>
+      <div id="network-options" class="mt-3 flex items-center gap-4 flex-wrap hidden">
+        <span class="text-sm font-medium text-gray-700">Layout:</span>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="network-layout" id="network-force" checked class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Force-Directed</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="network-layout" id="network-radial" class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Radial/Circular</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="network-labels" checked class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Show Labels</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="network-legend" checked class="h-4 w-4" />
+          <span class="text-sm text-gray-600">Show Legend</span>
         </label>
       </div>
       <div id="axis-scale-options" class="mt-3 flex items-center gap-6 flex-wrap">

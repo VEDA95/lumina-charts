@@ -7,17 +7,25 @@ import {
   PieChart,
   CandlestickChart,
   BoxplotChart,
+  HeatmapChart,
+  NetworkChart,
   PanHandler,
   ZoomHandler,
   HoverHandler,
   SelectionHandler,
+  VIRIDIS,
+  SEQUENTIAL_BLUE,
+  DIVERGING_RWB,
   type Series,
   type DataPoint,
   type BubbleDataPoint,
   type OHLCDataPoint,
   type QuartileDataPoint,
+  type HeatmapMatrixData,
+  type NetworkData,
   type BaseChart,
   type ScaleType,
+  type RGBAColor,
 } from '@lumina-charts/core';
 
 // DOM elements
@@ -30,6 +38,8 @@ const btnBubble = document.getElementById('btn-bubble')!;
 const btnPie = document.getElementById('btn-pie')!;
 const btnCandlestick = document.getElementById('btn-candlestick')!;
 const btnBoxplot = document.getElementById('btn-boxplot')!;
+const btnHeatmap = document.getElementById('btn-heatmap')!;
+const btnNetwork = document.getElementById('btn-network')!;
 const btn1k = document.getElementById('btn-1k')!;
 const btn10k = document.getElementById('btn-10k')!;
 const btn100k = document.getElementById('btn-100k')!;
@@ -67,6 +77,16 @@ const candlestickHorizontal = document.getElementById('candlestick-horizontal') 
 const boxplotOptions = document.getElementById('boxplot-options')!;
 const boxplotVertical = document.getElementById('boxplot-vertical') as HTMLInputElement;
 const boxplotHorizontal = document.getElementById('boxplot-horizontal') as HTMLInputElement;
+const heatmapOptions = document.getElementById('heatmap-options')!;
+const heatmapViridis = document.getElementById('heatmap-viridis') as HTMLInputElement;
+const heatmapSequential = document.getElementById('heatmap-sequential') as HTMLInputElement;
+const heatmapDiverging = document.getElementById('heatmap-diverging') as HTMLInputElement;
+const heatmapLabels = document.getElementById('heatmap-labels') as HTMLInputElement;
+const networkOptions = document.getElementById('network-options')!;
+const networkForce = document.getElementById('network-force') as HTMLInputElement;
+const networkRadial = document.getElementById('network-radial') as HTMLInputElement;
+const networkLabels = document.getElementById('network-labels') as HTMLInputElement;
+const networkLegend = document.getElementById('network-legend') as HTMLInputElement;
 const xScaleSelect = document.getElementById('x-scale-select') as HTMLSelectElement;
 const yScaleSelect = document.getElementById('y-scale-select') as HTMLSelectElement;
 const axisScaleOptions = document.getElementById('axis-scale-options')!;
@@ -110,7 +130,7 @@ requestAnimationFrame(updateFps);
 setInterval(updateMemory, 1000);
 
 // Current chart type and instance
-let currentChartType: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' | 'candlestick' | 'boxplot' = 'scatter';
+let currentChartType: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' | 'candlestick' | 'boxplot' | 'heatmap' | 'network' = 'scatter';
 let chart: BaseChart | null = null;
 let barChart: BarChart | null = null; // Keep reference for setCategories
 let histogramChart: HistogramChart | null = null; // Keep reference for setValues
@@ -119,6 +139,8 @@ let bubbleChart: BubbleChart | null = null; // Keep reference for bubble options
 let pieChart: PieChart | null = null; // Keep reference for pie options
 let candlestickChart: CandlestickChart | null = null; // Keep reference for candlestick options
 let boxplotChart: BoxplotChart | null = null; // Keep reference for boxplot options
+let heatmapChart: HeatmapChart | null = null; // Keep reference for heatmap options
+let networkChart: NetworkChart | null = null; // Keep reference for network options
 let zoomHandler: ZoomHandler | null = null;
 let selectionHandler: SelectionHandler | null = null;
 let currentPointCount = 1000;
@@ -151,7 +173,7 @@ function getChartOptions() {
 }
 
 // Create chart based on type
-function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' | 'candlestick' | 'boxplot'): void {
+function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' | 'candlestick' | 'boxplot' | 'heatmap' | 'network'): void {
   // Dispose existing chart
   if (chart) {
     chart.dispose();
@@ -163,6 +185,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     pieChart = null;
     candlestickChart = null;
     boxplotChart = null;
+    heatmapChart = null;
+    networkChart = null;
   }
 
   // Clear container
@@ -347,9 +371,66 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
       },
     });
     chart = boxplotChart;
+  } else if (type === 'heatmap') {
+    // Get current color scale setting
+    let colors: RGBAColor[];
+    let scaleType: 'sequential' | 'diverging' = 'sequential';
+    if (heatmapDiverging.checked) {
+      colors = [...DIVERGING_RWB];
+      scaleType = 'diverging';
+    } else if (heatmapSequential.checked) {
+      colors = [...SEQUENTIAL_BLUE];
+    } else {
+      colors = [...VIRIDIS];
+    }
+
+    heatmapChart = new HeatmapChart({
+      container: chartContainer,
+      options: {
+        margins: { top: 20, right: 20, bottom: 60, left: 80 },
+        xAxis: {
+          label: 'Column',
+          ticks: { count: 10 },
+        },
+        yAxis: {
+          label: 'Row',
+          ticks: { count: 10 },
+        },
+        gridColor: [0.93, 0.93, 0.93, 1.0] as [number, number, number, number],
+        colorScale: {
+          type: scaleType,
+          colors,
+        },
+        cellGap: 1,
+        showLabels: heatmapLabels.checked,
+        labelThreshold: 25,
+        hoverBrighten: 1.2,
+      },
+    });
+    chart = heatmapChart;
+  } else if (type === 'network') {
+    // Get current layout setting
+    const layout = networkRadial.checked ? 'radial' : 'force';
+
+    networkChart = new NetworkChart({
+      container: chartContainer,
+      options: {
+        layout,
+        showLabels: networkLabels.checked,
+        showLegend: networkLegend.checked,
+        nodeSizeRange: [8, 28],
+        edgeWidthRange: [2, 5],
+        edgeCurve: 0.15,
+        edgeOpacity: 0.7,
+        dimOpacity: 0.1,
+        hoverBrighten: 1.2,
+        legendPosition: 'top-right',
+      },
+    });
+    chart = networkChart;
   }
 
-  // Add interactions (except for pie chart which handles its own)
+  // Add interactions (except for pie charts which handle their own)
   if (type !== 'pie') {
     const panHandler = new PanHandler({ momentum: true });
     zoomHandler = new ZoomHandler({ speed: 1.5 });
@@ -357,8 +438,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     chart?.addInteraction(panHandler);
     chart?.addInteraction(zoomHandler);
 
-    // Candlestick and boxplot have their own hover handling, other charts use HoverHandler
-    if (type !== 'candlestick' && type !== 'boxplot') {
+    // Candlestick, boxplot, heatmap, and network have their own hover handling, other charts use HoverHandler
+    if (type !== 'candlestick' && type !== 'boxplot' && type !== 'heatmap' && type !== 'network') {
       const hoverHandler = new HoverHandler({ showTooltip: true });
       selectionHandler = new SelectionHandler({ mode: 'single' });
       chart?.addInteraction(hoverHandler);
@@ -428,6 +509,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
   btnPie.className = type === 'pie' ? activeClass : inactiveClass;
   btnCandlestick.className = type === 'candlestick' ? activeClass : inactiveClass;
   btnBoxplot.className = type === 'boxplot' ? activeClass : inactiveClass;
+  btnHeatmap.className = type === 'heatmap' ? activeClass : inactiveClass;
+  btnNetwork.className = type === 'network' ? activeClass : inactiveClass;
 
   // Show/hide histogram options
   if (type === 'histogram') {
@@ -469,6 +552,20 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     boxplotOptions.classList.remove('hidden');
   } else {
     boxplotOptions.classList.add('hidden');
+  }
+
+  // Show/hide heatmap options
+  if (type === 'heatmap') {
+    heatmapOptions.classList.remove('hidden');
+  } else {
+    heatmapOptions.classList.add('hidden');
+  }
+
+  // Show/hide network options
+  if (type === 'network') {
+    networkOptions.classList.remove('hidden');
+  } else {
+    networkOptions.classList.add('hidden');
   }
 
   currentChartType = type;
@@ -909,6 +1006,98 @@ function generateBoxplotData(categoryCount: number): Series[] {
   }];
 }
 
+// Generate heatmap data (matrix with pattern)
+function generateHeatmapData(rows: number, cols: number): HeatmapMatrixData {
+  const matrix: number[][] = [];
+  const rowLabels: string[] = [];
+  const colLabels: string[] = [];
+
+  for (let r = 0; r < rows; r++) {
+    rowLabels.push(`Row ${r + 1}`);
+    matrix[r] = [];
+    for (let c = 0; c < cols; c++) {
+      if (r === 0) colLabels.push(`Col ${c + 1}`);
+      // Generate value with some pattern + noise
+      const pattern = Math.sin(r * 0.5) * Math.cos(c * 0.3) * 50 + 50;
+      const noise = Math.random() * 10;
+      matrix[r][c] = pattern + noise;
+    }
+  }
+
+  return { matrix, rowLabels, colLabels };
+}
+
+// Network group names (social network style)
+const NETWORK_GROUPS = ['Engineering', 'Design', 'Marketing', 'Sales', 'Finance', 'HR', 'Product', 'Operations'];
+
+// Generate network data (social network style graph)
+function generateNetworkData(nodeCount: number): NetworkData {
+  const nodes: NetworkData['nodes'] = [];
+  const edges: NetworkData['edges'] = [];
+
+  // Generate nodes with group assignments
+  const groupCount = Math.min(8, Math.max(3, Math.floor(nodeCount / 5)));
+  const groups = NETWORK_GROUPS.slice(0, groupCount);
+
+  for (let i = 0; i < nodeCount; i++) {
+    const groupIdx = Math.floor(Math.random() * groupCount);
+    const size = 1 + Math.random() * 9; // Size from 1-10
+
+    nodes.push({
+      id: `node-${i}`,
+      label: `Person ${i + 1}`,
+      group: groups[groupIdx],
+      size,
+    });
+  }
+
+  // Generate edges - create a connected graph with varying density
+  // Each node connects to 2-5 other nodes preferentially within their group
+  const edgeSet = new Set<string>();
+
+  for (let i = 0; i < nodeCount; i++) {
+    const node = nodes[i];
+    const connectionCount = 2 + Math.floor(Math.random() * 4); // 2-5 connections
+
+    for (let c = 0; c < connectionCount; c++) {
+      let targetIdx: number;
+
+      // 70% chance to connect within same group
+      if (Math.random() < 0.7) {
+        // Find nodes in same group
+        const sameGroup = nodes
+          .map((n, idx) => ({ n, idx }))
+          .filter(({ n, idx }) => n.group === node.group && idx !== i);
+
+        if (sameGroup.length > 0) {
+          const pick = sameGroup[Math.floor(Math.random() * sameGroup.length)];
+          targetIdx = pick.idx;
+        } else {
+          targetIdx = Math.floor(Math.random() * nodeCount);
+        }
+      } else {
+        // Random connection
+        targetIdx = Math.floor(Math.random() * nodeCount);
+      }
+
+      // Avoid self-loops and duplicate edges
+      if (targetIdx !== i) {
+        const edgeKey = i < targetIdx ? `${i}-${targetIdx}` : `${targetIdx}-${i}`;
+        if (!edgeSet.has(edgeKey)) {
+          edgeSet.add(edgeKey);
+          edges.push({
+            source: `node-${i}`,
+            target: `node-${targetIdx}`,
+            weight: 1 + Math.random() * 2, // Weight 1-3
+          });
+        }
+      }
+    }
+  }
+
+  return { nodes, edges };
+}
+
 // Generate histogram data (values from a normal-ish distribution)
 function generateHistogramData(count: number): number[] {
   const values: number[] = [];
@@ -959,6 +1148,12 @@ function loadData(count: number): void {
   // For boxplot charts, use 3-8 categories
   const boxplotCategoryCount = Math.min(8, Math.max(3, Math.floor(count / 200)));
 
+  // For heatmap charts, use 5-20 rows/cols based on count
+  const heatmapSize = Math.min(20, Math.max(5, Math.floor(Math.sqrt(count / 10))));
+
+  // For network charts, use 20-100 nodes based on count
+  const networkNodeCount = Math.min(100, Math.max(20, Math.floor(count / 20)));
+
   const displayCount = currentChartType === 'bar'
     ? barCategoryCount + ' categories'
     : currentChartType === 'pie'
@@ -967,7 +1162,11 @@ function loadData(count: number): void {
         ? candleCount + ' candles'
         : currentChartType === 'boxplot'
           ? boxplotCategoryCount + ' boxplots'
-          : count.toLocaleString() + ' points';
+          : currentChartType === 'heatmap'
+            ? `${heatmapSize}x${heatmapSize} cells`
+            : currentChartType === 'network'
+              ? `${networkNodeCount} nodes`
+              : count.toLocaleString() + ' points';
   console.log(`\n========== Loading ${displayCount} (${currentChartType}) ==========`);
 
   // Data generation
@@ -1017,6 +1216,20 @@ function loadData(count: number): void {
       boxplotChart.setCategories(BOXPLOT_CATEGORIES.slice(0, boxplotCategoryCount));
     }
     totalPoints = boxplotCategoryCount;
+  } else if (currentChartType === 'heatmap') {
+    const heatmapData = generateHeatmapData(heatmapSize, heatmapSize);
+    // Set matrix data on heatmap chart
+    if (heatmapChart) {
+      heatmapChart.setMatrix(heatmapData.matrix, heatmapData.rowLabels, heatmapData.colLabels);
+    }
+    totalPoints = heatmapSize * heatmapSize;
+  } else if (currentChartType === 'network') {
+    const networkData = generateNetworkData(networkNodeCount);
+    // Set network data on network chart
+    if (networkChart) {
+      networkChart.setNetworkData(networkData);
+    }
+    totalPoints = networkData.nodes.length;
   }
 
   const genTime = performance.now() - startGen;
@@ -1036,6 +1249,10 @@ function loadData(count: number): void {
   const startRender = performance.now();
   if (currentChartType === 'histogram' && histogramChart) {
     histogramChart.setValues(histogramValues);
+  } else if (currentChartType === 'heatmap') {
+    // Already called setMatrix above
+  } else if (currentChartType === 'network') {
+    // Already called setNetworkData above
   } else {
     chart.setData(series);
   }
@@ -1122,6 +1339,20 @@ btnBoxplot.addEventListener('click', () => {
   }
 });
 
+btnHeatmap.addEventListener('click', () => {
+  if (currentChartType !== 'heatmap') {
+    createChart('heatmap');
+    loadData(currentPointCount);
+  }
+});
+
+btnNetwork.addEventListener('click', () => {
+  if (currentChartType !== 'network') {
+    createChart('network');
+    loadData(currentPointCount);
+  }
+});
+
 // Button handlers
 btn1k.addEventListener('click', () => loadData(1_000));
 btn10k.addEventListener('click', () => loadData(10_000));
@@ -1138,6 +1369,10 @@ btnReset.addEventListener('click', () => {
 btnClear.addEventListener('click', () => {
   if (selectionHandler) {
     selectionHandler.clearSelection();
+  } else if (heatmapChart && currentChartType === 'heatmap') {
+    heatmapChart.clearSelection();
+  } else if (networkChart && currentChartType === 'network') {
+    networkChart.clearSelection();
   }
 });
 
@@ -1231,6 +1466,31 @@ function updateLODStats(): void {
     return;
   }
 
+  // Heatmap charts don't have LOD
+  if (currentChartType === 'heatmap') {
+    statLod.textContent = 'N/A';
+    statLod.style.color = '#666';
+    // Display cell count for heatmap chart
+    if (heatmapChart) {
+      const cells = heatmapChart.getCells();
+      statVisible.textContent = cells.length.toString() + ' cells';
+    }
+    return;
+  }
+
+  // Network charts don't have LOD
+  if (currentChartType === 'network') {
+    statLod.textContent = 'N/A';
+    statLod.style.color = '#666';
+    // Display node count for network chart
+    if (networkChart) {
+      const nodes = networkChart.getNodes();
+      const edges = networkChart.getEdges();
+      statVisible.textContent = `${nodes.length} nodes, ${edges.length} edges`;
+    }
+    return;
+  }
+
   if (currentChartType === 'histogram') {
     statLod.textContent = 'N/A';
     statLod.style.color = '#666';
@@ -1300,8 +1560,8 @@ function updateLODStats(): void {
 lodToggle.addEventListener('change', () => {
   if (!chart) return;
 
-  // Bar, histogram, pie, candlestick, and boxplot charts don't have LOD
-  if (currentChartType === 'bar' || currentChartType === 'histogram' || currentChartType === 'pie' || currentChartType === 'candlestick' || currentChartType === 'boxplot') {
+  // Bar, histogram, pie, candlestick, boxplot, heatmap, and network charts don't have LOD
+  if (currentChartType === 'bar' || currentChartType === 'histogram' || currentChartType === 'pie' || currentChartType === 'candlestick' || currentChartType === 'boxplot' || currentChartType === 'heatmap' || currentChartType === 'network') {
     console.log(`${currentChartType} charts do not support LOD`);
     return;
   }
@@ -1412,6 +1672,72 @@ function updateBoxplotOrientation(): void {
 boxplotVertical.addEventListener('change', updateBoxplotOrientation);
 boxplotHorizontal.addEventListener('change', updateBoxplotOrientation);
 
+// Heatmap color scale toggle handlers
+function updateHeatmapColorScale(): void {
+  if (!heatmapChart) return;
+
+  let colors: RGBAColor[];
+  let scaleType: 'sequential' | 'diverging' = 'sequential';
+  if (heatmapDiverging.checked) {
+    colors = [...DIVERGING_RWB];
+    scaleType = 'diverging';
+  } else if (heatmapSequential.checked) {
+    colors = [...SEQUENTIAL_BLUE];
+  } else {
+    colors = [...VIRIDIS];
+  }
+
+  heatmapChart.updateOptions({
+    colorScale: { type: scaleType, colors },
+  });
+
+  console.log(`Heatmap color scale set to: ${heatmapDiverging.checked ? 'diverging' : heatmapSequential.checked ? 'sequential blue' : 'viridis'}`);
+}
+
+function updateHeatmapLabels(): void {
+  if (!heatmapChart) return;
+
+  heatmapChart.updateOptions({ showLabels: heatmapLabels.checked });
+
+  console.log(`Heatmap labels ${heatmapLabels.checked ? 'enabled' : 'disabled'}`);
+}
+
+heatmapViridis.addEventListener('change', updateHeatmapColorScale);
+heatmapSequential.addEventListener('change', updateHeatmapColorScale);
+heatmapDiverging.addEventListener('change', updateHeatmapColorScale);
+heatmapLabels.addEventListener('change', updateHeatmapLabels);
+
+// Network layout toggle handlers
+function updateNetworkLayout(): void {
+  if (!networkChart) return;
+
+  const layout = networkRadial.checked ? 'radial' : 'force';
+  networkChart.setLayout(layout);
+
+  console.log(`Network layout set to: ${layout}`);
+}
+
+function updateNetworkLabels(): void {
+  if (!networkChart) return;
+
+  networkChart.updateOptions({ showLabels: networkLabels.checked });
+
+  console.log(`Network labels ${networkLabels.checked ? 'enabled' : 'disabled'}`);
+}
+
+function updateNetworkLegend(): void {
+  if (!networkChart) return;
+
+  networkChart.updateOptions({ showLegend: networkLegend.checked });
+
+  console.log(`Network legend ${networkLegend.checked ? 'enabled' : 'disabled'}`);
+}
+
+networkForce.addEventListener('change', updateNetworkLayout);
+networkRadial.addEventListener('change', updateNetworkLayout);
+networkLabels.addEventListener('change', updateNetworkLabels);
+networkLegend.addEventListener('change', updateNetworkLegend);
+
 // Axis scale change handlers
 function updateAxisScales(): void {
   // Recreate chart with new scale settings
@@ -1426,8 +1752,8 @@ yScaleSelect.addEventListener('change', updateAxisScales);
 
 // Update axis scale options based on chart type
 function updateAxisScaleVisibility(): void {
-  // Pie, candlestick, and boxplot charts don't use the standard axis scale selectors
-  if (currentChartType === 'pie' || currentChartType === 'candlestick' || currentChartType === 'boxplot') {
+  // Pie, candlestick, boxplot, heatmap, and network charts don't use the standard axis scale selectors
+  if (currentChartType === 'pie' || currentChartType === 'candlestick' || currentChartType === 'boxplot' || currentChartType === 'heatmap' || currentChartType === 'network') {
     axisScaleOptions.classList.add('hidden');
     return;
   }

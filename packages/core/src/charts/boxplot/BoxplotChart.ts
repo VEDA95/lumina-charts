@@ -504,7 +504,16 @@ export class BoxplotChart extends BaseChart {
         categoryNormalized = (point.x - domain.x[0]) / (domain.x[1] - domain.x[0]);
         categoryPos = plotLeft + categoryNormalized * plotWidth;
       } else {
-        categoryNormalized = (point.x - domain.y[0]) / (domain.y[1] - domain.y[0]);
+        // For horizontal orientation, flip Y domain to correct pan direction
+        // Pan handler uses Y-up coords, but category axis uses Y-down (screen coords)
+        const initial = this.initialDomain;
+        if (initial) {
+          const flippedDomainY0 = initial.y[0] + initial.y[1] - domain.y[1];
+          const flippedDomainY1 = initial.y[0] + initial.y[1] - domain.y[0];
+          categoryNormalized = (point.x - flippedDomainY0) / (flippedDomainY1 - flippedDomainY0);
+        } else {
+          categoryNormalized = (point.x - domain.y[0]) / (domain.y[1] - domain.y[0]);
+        }
         categoryPos = plotTop + categoryNormalized * plotHeight;
       }
 
@@ -574,8 +583,23 @@ export class BoxplotChart extends BaseChart {
    * Called when domain changes (zoom/pan)
    */
   protected onDomainChange(domain: DataDomain): void {
+    const orientation = this.getOrientation();
+
+    // For horizontal orientation, flip Y domain to correct pan direction
+    let renderDomain = domain;
+    if (orientation === 'horizontal' && this.initialDomain) {
+      const initial = this.initialDomain;
+      renderDomain = {
+        x: domain.x,
+        y: [
+          initial.y[0] + initial.y[1] - domain.y[1],
+          initial.y[0] + initial.y[1] - domain.y[0],
+        ],
+      };
+    }
+
     if (this.axisRenderer) {
-      this.axisRenderer.setDomain(domain);
+      this.axisRenderer.setDomain(renderDomain);
       this.axisRenderer.render();
     }
     this.syncGridTicks();

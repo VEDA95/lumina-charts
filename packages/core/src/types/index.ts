@@ -122,3 +122,42 @@ export type {
   BoxplotEvent,
   BoxplotVertexData,
 } from './boxplot.js';
+
+// Heatmap chart types
+export type {
+  HeatmapDataPoint,
+  HeatmapMatrixData,
+  ColorScaleType,
+  ColorScaleConfig,
+  HeatmapCell,
+  HeatmapChartOptions,
+  HeatmapChartConfig,
+  HeatmapCellEvent,
+  HeatmapVertexData,
+} from './heatmap.js';
+
+export {
+  SEQUENTIAL_BLUE,
+  SEQUENTIAL_GREEN,
+  DIVERGING_RWB,
+  VIRIDIS,
+  PLASMA,
+} from './heatmap.js';
+
+// Network chart types
+export type {
+  NetworkNode,
+  NetworkEdge,
+  NetworkData,
+  NetworkLayoutType,
+  ForceLayoutConfig,
+  RadialLayoutConfig,
+  ProcessedNode,
+  ProcessedEdge,
+  NetworkChartOptions,
+  NetworkChartConfig,
+  NetworkNodeEvent,
+  NetworkVertexData,
+} from './network.js';
+
+export { DEFAULT_GROUP_COLORS } from './network.js';

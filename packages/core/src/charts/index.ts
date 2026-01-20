@@ -16,3 +16,5 @@ export * from './bubble/index.js';
 export * from './pie/index.js';
 export * from './candlestick/index.js';
 export * from './boxplot/index.js';
+export * from './heatmap/index.js';
+export * from './network/index.js';

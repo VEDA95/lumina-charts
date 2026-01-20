@@ -15,6 +15,8 @@ export {
   PieChart,
   CandlestickChart,
   BoxplotChart,
+  HeatmapChart,
+  NetworkChart,
   GridRenderPass,
   BarRenderPass,
   HistogramRenderPass,
@@ -22,6 +24,11 @@ export {
   PieRenderPass,
   CandlestickRenderPass,
   BoxplotRenderPass,
+  HeatmapRenderPass,
+  EdgeRenderPass,
+  NodeRenderPass,
+  ForceLayout,
+  RadialLayout,
   binData,
   sturgesBinCount,
   scottBinCount,
@@ -64,6 +71,9 @@ export type {
   PieRenderPassConfig,
   CandlestickRenderPassConfig,
   BoxplotRenderPassConfig,
+  HeatmapRenderPassConfig,
+  EdgeRenderPassConfig,
+  NodeRenderPassConfig,
 } from './charts/index.js';
 
 // Axes
@@ -120,6 +130,8 @@ export { BAR_SHADER, BAR_WITH_BORDER_SHADER } from './shaders/bar.js';
 export { PIE_SHADER, PIE_WITH_BORDER_SHADER } from './shaders/pie.js';
 export { CANDLESTICK_BODY_SHADER, CANDLESTICK_WICK_SHADER, CANDLESTICK_BODY_BORDER_SHADER } from './shaders/candlestick.js';
 export { BOXPLOT_BOX_SHADER, BOXPLOT_LINE_SHADER, BOXPLOT_OUTLIER_SHADER } from './shaders/boxplot.js';
+export { HEATMAP_CELL_SHADER } from './shaders/heatmap.js';
+export { NETWORK_NODE_SHADER, NETWORK_EDGE_SHADER } from './shaders/network.js';
 export { buildVertexShader, buildFragmentShader } from './shaders/common.js';
 
 // Types
@@ -215,9 +227,34 @@ export type {
   BoxplotChartConfig,
   BoxplotEvent,
   BoxplotVertexData,
+  // Heatmap chart types
+  HeatmapDataPoint,
+  HeatmapMatrixData,
+  ColorScaleType,
+  ColorScaleConfig,
+  HeatmapCell,
+  HeatmapChartOptions,
+  HeatmapChartConfig,
+  HeatmapCellEvent,
+  HeatmapVertexData,
+  // Network chart types
+  NetworkNode,
+  NetworkEdge,
+  NetworkData,
+  NetworkLayoutType,
+  ForceLayoutConfig,
+  RadialLayoutConfig,
+  ProcessedNode,
+  ProcessedEdge,
+  NetworkChartOptions,
+  NetworkChartConfig,
+  NetworkNodeEvent,
+  NetworkVertexData,
 } from './types/index.js';
 
 export { DEFAULT_THEME_STYLES } from './types/index.js';
+export { SEQUENTIAL_BLUE, SEQUENTIAL_GREEN, DIVERGING_RWB, VIRIDIS, PLASMA } from './types/index.js';
+export { DEFAULT_GROUP_COLORS } from './types/index.js';
 
 // Utils
 export { EventEmitter, ChartEvent, addManagedListener } from './utils/EventEmitter.js';
