@@ -45,6 +45,12 @@ export interface LineChartOptions extends ChartOptions {
   smooth?: boolean;
   /** Smoothing tension (0 = sharp, 0.5 = default, 1 = very smooth) */
   smoothTension?: number;
+  /** Show filled area under the line (default: false) */
+  showArea?: boolean;
+  /** Area fill opacity at the top (line) - default: 0.4 */
+  areaOpacity?: number;
+  /** Use gradient fill for area (solid to transparent) - default: true */
+  areaGradient?: boolean;
 }
 
 /**
@@ -205,6 +211,9 @@ export class LineChart extends BaseChart {
     const pointColor = this.lineOptions.pointColor;
     const smooth = this.lineOptions.smooth ?? false;
     const smoothTension = this.lineOptions.smoothTension ?? 0.5;
+    const showArea = this.lineOptions.showArea ?? false;
+    const areaOpacity = this.lineOptions.areaOpacity ?? 0.4;
+    const areaGradient = this.lineOptions.areaGradient !== false;
 
     // Process each series
     for (let seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
@@ -259,6 +268,9 @@ export class LineChart extends BaseChart {
         pointColor: pointColor ?? color,
         originalPositions: showPoints ? originalPositions : undefined,
         originalPointCount: showPoints ? sortedData.length : undefined,
+        showArea,
+        areaOpacity,
+        areaGradient,
       });
     }
   }
@@ -409,7 +421,10 @@ export class LineChart extends BaseChart {
       options.pointSize !== undefined ||
       options.pointColor !== undefined ||
       options.smooth !== undefined ||
-      options.smoothTension !== undefined;
+      options.smoothTension !== undefined ||
+      options.showArea !== undefined ||
+      options.areaOpacity !== undefined ||
+      options.areaGradient !== undefined;
 
     if (needsRerender) {
       Object.assign(this.lineOptions, options);

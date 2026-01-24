@@ -4,6 +4,7 @@
 
 import type { DataDomain, Series, DataPoint } from './data.js';
 import type { ScaleType, ScaleConfig } from './scale.js';
+import type { RGBAColor } from './theme.js';
 
 /**
  * Chart margin configuration
@@ -21,6 +22,8 @@ export interface Margins {
 export interface ChartOptions {
   /** Chart margins */
   margins?: Margins;
+  /** Background color (RGBA 0-1) */
+  backgroundColor?: RGBAColor;
   /** Theme name or configuration */
   theme?: string | ThemeConfig;
   /** Enable animations */
@@ -208,6 +211,12 @@ export interface AxisConfig {
   scale?: ScaleConfig;
   /** Value formatter */
   formatter?: (value: number | string | Date) => string;
+  /** Show axis line (default: true) */
+  showLine?: boolean;
+  /** Show tick marks (default: true) - distinct from tick labels */
+  showTicks?: boolean;
+  /** Axis label style preset */
+  labelStyle?: 'default' | 'minimal';
 }
 
 export interface TickConfig {

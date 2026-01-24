@@ -175,6 +175,12 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
       this.renderer.addRenderPass(pass);
     }
 
+    // Apply background color if specified
+    if (this.options.backgroundColor) {
+      const bg = this.options.backgroundColor;
+      this.renderer.setClearColor(bg[0], bg[1], bg[2], bg[3]);
+    }
+
     // Emit ready event
     queueMicrotask(() => this.emit('ready', undefined));
   }
@@ -219,6 +225,7 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
       width: 100%;
       height: 100%;
       pointer-events: none;
+      z-index: 1;
     `;
 
     // Create tooltip container
@@ -825,8 +832,12 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
   /**
    * Called when options are updated
    */
-  protected onOptionsUpdate(_options: Partial<ChartOptions>): void {
-    // Override in subclass if needed
+  protected onOptionsUpdate(options: Partial<ChartOptions>): void {
+    // Apply background color if changed
+    if (options.backgroundColor) {
+      const bg = options.backgroundColor;
+      this.renderer.setClearColor(bg[0], bg[1], bg[2], bg[3]);
+    }
   }
 
   /**

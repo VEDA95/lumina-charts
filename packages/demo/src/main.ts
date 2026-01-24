@@ -16,6 +16,11 @@ import {
   VIRIDIS,
   SEQUENTIAL_BLUE,
   DIVERGING_RWB,
+  // shadcn theme imports
+  SHADCN_COLORS_RGBA,
+  SHADCN_THEME_CONFIG,
+  SHADCN_DARK_THEME_CONFIG,
+  getShadcnGridColor,
   type Series,
   type DataPoint,
   type BubbleDataPoint,
@@ -90,6 +95,62 @@ const networkLegend = document.getElementById('network-legend') as HTMLInputElem
 const xScaleSelect = document.getElementById('x-scale-select') as HTMLSelectElement;
 const yScaleSelect = document.getElementById('y-scale-select') as HTMLSelectElement;
 const axisScaleOptions = document.getElementById('axis-scale-options')!;
+const themeToggle = document.getElementById('theme-toggle')!;
+const themeToggleThumb = document.getElementById('theme-toggle-thumb')!;
+const themeLabel = document.getElementById('theme-label')!;
+
+// Theme state
+let isDarkMode = false;
+
+// Initialize theme from localStorage or system preference
+function initializeTheme(): void {
+  const savedTheme = localStorage.getItem('lumina-theme');
+  if (savedTheme) {
+    isDarkMode = savedTheme === 'dark';
+  } else {
+    // Check system preference
+    isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  applyTheme();
+}
+
+// Apply theme to DOM
+function applyTheme(): void {
+  if (isDarkMode) {
+    document.documentElement.classList.add('dark');
+    document.body.classList.add('dark');
+    themeToggleThumb.style.transform = 'translateX(28px)';
+    themeToggle.style.backgroundColor = '#3f3f46'; // zinc-700
+    themeLabel.textContent = 'Dark';
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+    themeToggleThumb.style.transform = 'translateX(0)';
+    themeToggle.style.backgroundColor = '#e4e4e7'; // zinc-200
+    themeLabel.textContent = 'Light';
+  }
+  localStorage.setItem('lumina-theme', isDarkMode ? 'dark' : 'light');
+}
+
+// Toggle theme
+function toggleTheme(): void {
+  isDarkMode = !isDarkMode;
+  applyTheme();
+  // Recreate chart with new theme
+  createChart(currentChartType);
+  loadData(currentPointCount);
+}
+
+// Theme toggle handler
+themeToggle.addEventListener('click', toggleTheme);
+
+// Initialize theme on load
+initializeTheme();
+
+// Get current theme config
+function getThemeConfig() {
+  return isDarkMode ? SHADCN_DARK_THEME_CONFIG : SHADCN_THEME_CONFIG;
+}
 
 // FPS tracking
 let frameCount = 0;
@@ -155,20 +216,31 @@ function getYScaleType(): ScaleType {
 }
 
 // Chart options (generated dynamically to include current scale types)
+// Using shadcn theme for modern, minimal aesthetics
 function getChartOptions() {
+  const themeConfig = getThemeConfig();
   return {
     margins: { top: 20, right: 20, bottom: 50, left: 60 },
     xAxis: {
       label: 'X Value',
       ticks: { count: 10 },
       type: getXScaleType(),
+      showLine: themeConfig.showAxisLines,
+      showTicks: themeConfig.showAxisTicks,
+      labelStyle: 'minimal' as const,
+      labelColor: themeConfig.axisLabel,
     },
     yAxis: {
       label: 'Y Value',
       ticks: { count: 8 },
       type: getYScaleType(),
+      showLine: themeConfig.showAxisLines,
+      showTicks: themeConfig.showAxisTicks,
+      labelStyle: 'minimal' as const,
+      labelColor: themeConfig.axisLabel,
     },
-    gridColor: [0.93, 0.93, 0.93, 1.0] as [number, number, number, number],
+    gridColor: getShadcnGridColor(isDarkMode),
+    backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
   };
 }
 
@@ -224,6 +296,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
   } else if (type === 'bar') {
     const xScale = getXScaleType();
     const xAxisLabel = xScale === 'time' ? 'Month' : 'Category';
+    const themeConfig = getThemeConfig();
 
     barChart = new BarChart({
       container: chartContainer,
@@ -233,18 +306,28 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
           label: xAxisLabel,
           ticks: { count: 6 },
           type: xScale === 'band' ? 'linear' : xScale, // band scale handled via setCategories
+          showLine: themeConfig.showAxisLines,
+          showTicks: themeConfig.showAxisTicks,
+          labelStyle: 'minimal' as const,
+          labelColor: themeConfig.axisLabel,
         },
         yAxis: {
           label: 'Value',
           ticks: { count: 8 },
           type: getYScaleType(),
+          showLine: themeConfig.showAxisLines,
+          showTicks: themeConfig.showAxisTicks,
+          labelStyle: 'minimal' as const,
+          labelColor: themeConfig.axisLabel,
         },
         barGap: 4,
         groupGap: 20,
+        cornerRadius: themeConfig.barCornerRadius,
       },
     });
     chart = barChart;
   } else if (type === 'histogram') {
+    const themeConfig = getThemeConfig();
     histogramChart = new HistogramChart({
       container: chartContainer,
       options: {
@@ -265,6 +348,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
         densityCurveColor: [0.9, 0.3, 0.3, 1.0],
         showCumulative: true,
         cumulativeColor: [0.3, 0.7, 0.3, 1.0],
+        cornerRadius: themeConfig.barCornerRadius,
       },
     });
     chart = histogramChart;
@@ -311,14 +395,17 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
           position: 'outside',
           showPercentage: true,
           minAngleForLabel: 15,
+          fontColor: isDarkMode ? '#fafafa' : '#18181b',
         },
         hoverBrighten: 1.15,
+        backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
       },
     });
     chart = pieChart;
   } else if (type === 'candlestick') {
     // Get current orientation setting
     const orientation = candlestickHorizontal.checked ? 'horizontal' : 'vertical';
+    const themeConfig = getThemeConfig();
 
     candlestickChart = new CandlestickChart({
       container: chartContainer,
@@ -328,14 +415,17 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
         xAxis: {
           label: orientation === 'vertical' ? 'Date' : 'Price',
           ticks: { count: 8 },
+          labelColor: themeConfig.axisLabel,
         },
         yAxis: {
           label: orientation === 'vertical' ? 'Price' : 'Date',
           ticks: { count: 8 },
+          labelColor: themeConfig.axisLabel,
         },
-        gridColor: [0.93, 0.93, 0.93, 1.0] as [number, number, number, number],
-        upColor: [0.2, 0.7, 0.3, 1.0],
-        downColor: [0.8, 0.2, 0.2, 1.0],
+        gridColor: getShadcnGridColor(isDarkMode),
+        backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
+        upColor: [0.34, 0.76, 0.45, 1.0], // green-500
+        downColor: [0.94, 0.33, 0.33, 1.0], // red-500
         candleWidth: 0.8,
         wickWidth: 1,
         hoverBrighten: 1.2,
@@ -345,6 +435,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
   } else if (type === 'boxplot') {
     // Get current orientation setting
     const orientation = boxplotHorizontal.checked ? 'horizontal' : 'vertical';
+    const themeConfig = getThemeConfig();
 
     boxplotChart = new BoxplotChart({
       container: chartContainer,
@@ -354,18 +445,21 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
         xAxis: {
           label: orientation === 'vertical' ? 'Category' : 'Value',
           ticks: { count: 8 },
+          labelColor: themeConfig.axisLabel,
         },
         yAxis: {
           label: orientation === 'vertical' ? 'Value' : 'Category',
           ticks: { count: 8 },
+          labelColor: themeConfig.axisLabel,
         },
-        gridColor: [0.93, 0.93, 0.93, 1.0] as [number, number, number, number],
-        boxColor: [0.4, 0.6, 0.9, 1.0],
-        medianColor: [0.9, 0.4, 0.2, 1.0],
-        whiskerColor: [0.3, 0.3, 0.3, 1.0],
-        outlierColor: [0.8, 0.2, 0.2, 1.0],
+        gridColor: getShadcnGridColor(isDarkMode),
+        backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
+        boxColor: [0.37, 0.51, 0.96, 1.0], // blue-500
+        medianColor: [0.98, 0.45, 0.09, 1.0], // orange-500
+        whiskerColor: isDarkMode ? [0.92, 0.92, 0.94, 1.0] : [0.23, 0.23, 0.26, 1.0], // zinc-200 / zinc-800 for better contrast
+        outlierColor: [0.94, 0.33, 0.33, 1.0], // red-500
         boxWidth: 0.6,
-        whiskerWidth: 1,
+        whiskerWidth: 2,
         outlierSize: 4,
         hoverBrighten: 1.2,
       },
@@ -383,6 +477,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     } else {
       colors = [...VIRIDIS];
     }
+    const themeConfig = getThemeConfig();
 
     heatmapChart = new HeatmapChart({
       container: chartContainer,
@@ -391,12 +486,15 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
         xAxis: {
           label: 'Column',
           ticks: { count: 10 },
+          labelColor: themeConfig.axisLabel,
         },
         yAxis: {
           label: 'Row',
           ticks: { count: 10 },
+          labelColor: themeConfig.axisLabel,
         },
-        gridColor: [0.93, 0.93, 0.93, 1.0] as [number, number, number, number],
+        gridColor: getShadcnGridColor(isDarkMode),
+        backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
         colorScale: {
           type: scaleType,
           colors,
@@ -404,6 +502,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
         cellGap: 1,
         showLabels: heatmapLabels.checked,
         labelThreshold: 25,
+        labelColor: isDarkMode ? '#fafafa' : '#18181b',
         hoverBrighten: 1.2,
       },
     });
@@ -421,10 +520,12 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
         nodeSizeRange: [8, 28],
         edgeWidthRange: [2, 5],
         edgeCurve: 0.15,
-        edgeOpacity: 0.7,
+        edgeOpacity: isDarkMode ? 0.5 : 0.7,
         dimOpacity: 0.1,
         hoverBrighten: 1.2,
         legendPosition: 'top-right',
+        backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
+        labelColor: isDarkMode ? '#fafafa' : '#18181b',
       },
     });
     chart = networkChart;
@@ -440,7 +541,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
 
     // Candlestick, boxplot, heatmap, and network have their own hover handling, other charts use HoverHandler
     if (type !== 'candlestick' && type !== 'boxplot' && type !== 'heatmap' && type !== 'network') {
-      const hoverHandler = new HoverHandler({ showTooltip: true });
+      const hoverHandler = new HoverHandler({ showTooltip: true, tooltipStyle: 'shadcn' });
       selectionHandler = new SelectionHandler({ mode: 'single' });
       chart?.addInteraction(hoverHandler);
       chart?.addInteraction(selectionHandler);
@@ -674,10 +775,11 @@ function generateBarData(categoryCount: number): { series: Series[]; categories:
   const seriesCount = Math.min(3, Math.max(1, Math.floor(categoryCount / 4)));
 
   const seriesNames = ['Product A', 'Product B', 'Product C'];
+  // Use shadcn color palette for series
   const seriesColors: [number, number, number, number][] = [
-    [0.4, 0.6, 0.9, 1.0],
-    [0.9, 0.5, 0.4, 1.0],
-    [0.4, 0.8, 0.5, 1.0],
+    SHADCN_COLORS_RGBA[0] as [number, number, number, number], // primary blue
+    SHADCN_COLORS_RGBA[2] as [number, number, number, number], // indigo
+    SHADCN_COLORS_RGBA[4] as [number, number, number, number], // purple
   ];
 
   const result: Series[] = [];

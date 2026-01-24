@@ -75,6 +75,16 @@ export interface ThemeStyleConfig {
     duration: number;
     easing: string;
   };
+  /** Bar corner radius in pixels (for rounded bars) */
+  barCornerRadius?: number;
+  /** Whether to show axis lines */
+  showAxisLines?: boolean;
+  /** Whether to show axis tick marks */
+  showAxisTicks?: boolean;
+  /** Tooltip style preset */
+  tooltipStyle?: 'default' | 'shadcn';
+  /** Legend indicator shape */
+  legendIndicator?: 'circle' | 'square';
 }
 
 /**

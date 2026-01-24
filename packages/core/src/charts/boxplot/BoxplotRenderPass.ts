@@ -94,7 +94,7 @@ export class BoxplotRenderPass implements RenderPass {
     this.pixelRatio = config.pixelRatio;
     this.orientation = config.orientation ?? 'vertical';
     this.hoverBrighten = config.hoverBrighten ?? 1.2;
-    this.whiskerWidth = config.whiskerWidth ?? 1;
+    this.whiskerWidth = config.whiskerWidth ?? 2; // Increase default for better visibility
     this.outlierSize = config.outlierSize ?? 4;
   }
 
@@ -203,6 +203,10 @@ export class BoxplotRenderPass implements RenderPass {
       const [wr, wg, wb, wa] = box.whiskerColor;
       const [or, og, ob, oa] = box.outlierColor;
 
+      // Line thickness for whiskers and median (in pixels)
+      const lineThickness = this.whiskerWidth * this.pixelRatio;
+      const halfThickness = lineThickness / 2;
+
       if (this.orientation === 'vertical') {
         // Vertical: X is category position, Y is value
         const left = pos - halfWidth;
@@ -218,24 +222,47 @@ export class BoxplotRenderPass implements RenderPass {
         boxVertices.push(left, bottom, br, bg, bb, ba, hovered);
         boxVertices.push(right, bottom, br, bg, bb, ba, hovered);
 
-        // Whiskers (vertical lines)
-        // Lower whisker: min to Q1
-        whiskerVertices.push(pos, minPixel, wr, wg, wb, wa, hovered);
-        whiskerVertices.push(pos, q1Pixel, wr, wg, wb, wa, hovered);
-        // Upper whisker: Q3 to max
-        whiskerVertices.push(pos, q3Pixel, wr, wg, wb, wa, hovered);
-        whiskerVertices.push(pos, maxPixel, wr, wg, wb, wa, hovered);
+        // Whiskers as rectangles (2 triangles each = 6 vertices)
+        // Lower whisker: min to Q1 (vertical rectangle)
+        whiskerVertices.push(pos - halfThickness, minPixel, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos - halfThickness, q1Pixel, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos + halfThickness, minPixel, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos + halfThickness, minPixel, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos - halfThickness, q1Pixel, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos + halfThickness, q1Pixel, wr, wg, wb, wa, hovered);
 
-        // Whisker caps (horizontal lines at min and max)
+        // Upper whisker: Q3 to max (vertical rectangle)
+        whiskerVertices.push(pos - halfThickness, q3Pixel, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos - halfThickness, maxPixel, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos + halfThickness, q3Pixel, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos + halfThickness, q3Pixel, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos - halfThickness, maxPixel, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos + halfThickness, maxPixel, wr, wg, wb, wa, hovered);
+
+        // Whisker caps as rectangles (horizontal)
         const capWidth = halfWidth * 0.5;
-        whiskerVertices.push(pos - capWidth, minPixel, wr, wg, wb, wa, hovered);
-        whiskerVertices.push(pos + capWidth, minPixel, wr, wg, wb, wa, hovered);
-        whiskerVertices.push(pos - capWidth, maxPixel, wr, wg, wb, wa, hovered);
-        whiskerVertices.push(pos + capWidth, maxPixel, wr, wg, wb, wa, hovered);
+        // Min cap
+        whiskerVertices.push(pos - capWidth, minPixel - halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos - capWidth, minPixel + halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos + capWidth, minPixel - halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos + capWidth, minPixel - halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos - capWidth, minPixel + halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos + capWidth, minPixel + halfThickness, wr, wg, wb, wa, hovered);
+        // Max cap
+        whiskerVertices.push(pos - capWidth, maxPixel - halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos - capWidth, maxPixel + halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos + capWidth, maxPixel - halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos + capWidth, maxPixel - halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos - capWidth, maxPixel + halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(pos + capWidth, maxPixel + halfThickness, wr, wg, wb, wa, hovered);
 
-        // Median line (horizontal)
-        medianVertices.push(left, medianPixel, mr, mg, mb, ma, hovered);
-        medianVertices.push(right, medianPixel, mr, mg, mb, ma, hovered);
+        // Median line as rectangle (horizontal)
+        medianVertices.push(left, medianPixel - halfThickness, mr, mg, mb, ma, hovered);
+        medianVertices.push(left, medianPixel + halfThickness, mr, mg, mb, ma, hovered);
+        medianVertices.push(right, medianPixel - halfThickness, mr, mg, mb, ma, hovered);
+        medianVertices.push(right, medianPixel - halfThickness, mr, mg, mb, ma, hovered);
+        medianVertices.push(left, medianPixel + halfThickness, mr, mg, mb, ma, hovered);
+        medianVertices.push(right, medianPixel + halfThickness, mr, mg, mb, ma, hovered);
 
         // Outliers (diamonds)
         for (const outlier of box.outliers) {
@@ -266,22 +293,47 @@ export class BoxplotRenderPass implements RenderPass {
         boxVertices.push(left, bottom, br, bg, bb, ba, hovered);
         boxVertices.push(right, bottom, br, bg, bb, ba, hovered);
 
-        // Whiskers (horizontal lines)
-        whiskerVertices.push(minPixel, pos, wr, wg, wb, wa, hovered);
-        whiskerVertices.push(q1Pixel, pos, wr, wg, wb, wa, hovered);
-        whiskerVertices.push(q3Pixel, pos, wr, wg, wb, wa, hovered);
-        whiskerVertices.push(maxPixel, pos, wr, wg, wb, wa, hovered);
+        // Whiskers as rectangles (horizontal)
+        // Left whisker: min to Q1
+        whiskerVertices.push(minPixel, pos - halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(minPixel, pos + halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(q1Pixel, pos - halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(q1Pixel, pos - halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(minPixel, pos + halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(q1Pixel, pos + halfThickness, wr, wg, wb, wa, hovered);
 
-        // Whisker caps (vertical lines at min and max)
+        // Right whisker: Q3 to max
+        whiskerVertices.push(q3Pixel, pos - halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(q3Pixel, pos + halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(maxPixel, pos - halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(maxPixel, pos - halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(q3Pixel, pos + halfThickness, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(maxPixel, pos + halfThickness, wr, wg, wb, wa, hovered);
+
+        // Whisker caps as rectangles (vertical)
         const capWidth = halfWidth * 0.5;
-        whiskerVertices.push(minPixel, pos - capWidth, wr, wg, wb, wa, hovered);
-        whiskerVertices.push(minPixel, pos + capWidth, wr, wg, wb, wa, hovered);
-        whiskerVertices.push(maxPixel, pos - capWidth, wr, wg, wb, wa, hovered);
-        whiskerVertices.push(maxPixel, pos + capWidth, wr, wg, wb, wa, hovered);
+        // Min cap
+        whiskerVertices.push(minPixel - halfThickness, pos - capWidth, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(minPixel + halfThickness, pos - capWidth, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(minPixel - halfThickness, pos + capWidth, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(minPixel - halfThickness, pos + capWidth, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(minPixel + halfThickness, pos - capWidth, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(minPixel + halfThickness, pos + capWidth, wr, wg, wb, wa, hovered);
+        // Max cap
+        whiskerVertices.push(maxPixel - halfThickness, pos - capWidth, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(maxPixel + halfThickness, pos - capWidth, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(maxPixel - halfThickness, pos + capWidth, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(maxPixel - halfThickness, pos + capWidth, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(maxPixel + halfThickness, pos - capWidth, wr, wg, wb, wa, hovered);
+        whiskerVertices.push(maxPixel + halfThickness, pos + capWidth, wr, wg, wb, wa, hovered);
 
-        // Median line (vertical)
-        medianVertices.push(medianPixel, top, mr, mg, mb, ma, hovered);
-        medianVertices.push(medianPixel, bottom, mr, mg, mb, ma, hovered);
+        // Median line as rectangle (vertical)
+        medianVertices.push(medianPixel - halfThickness, top, mr, mg, mb, ma, hovered);
+        medianVertices.push(medianPixel + halfThickness, top, mr, mg, mb, ma, hovered);
+        medianVertices.push(medianPixel - halfThickness, bottom, mr, mg, mb, ma, hovered);
+        medianVertices.push(medianPixel - halfThickness, bottom, mr, mg, mb, ma, hovered);
+        medianVertices.push(medianPixel + halfThickness, top, mr, mg, mb, ma, hovered);
+        medianVertices.push(medianPixel + halfThickness, bottom, mr, mg, mb, ma, hovered);
 
         // Outliers (diamonds)
         for (const outlier of box.outliers) {
@@ -437,20 +489,19 @@ export class BoxplotRenderPass implements RenderPass {
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(plotLeft, ctx.height - plotTop - plotHeight, plotWidth, plotHeight);
 
-    // Draw whiskers first (behind boxes)
+    // Draw whiskers first (behind boxes) - using triangles for thick lines
     if (this.whiskerVertexCount > 0) {
-      const lineShader = this.lineShader!;
+      const boxShader = this.boxShader!; // Use box shader since whiskers are now triangles
 
       gl.bindVertexArray(this.whiskerVao);
-      this.setupVertexAttributes(lineShader, this.whiskerBuffer!);
+      this.setupVertexAttributes(boxShader, this.whiskerBuffer!);
 
-      lineShader.use(gl);
-      lineShader.setUniform('u_resolution', [ctx.width, ctx.height]);
-      lineShader.setUniform('u_pixelRatio', ctx.pixelRatio);
-      lineShader.setUniform('u_hoverBrighten', this.hoverBrighten);
+      boxShader.use(gl);
+      boxShader.setUniform('u_resolution', [ctx.width, ctx.height]);
+      boxShader.setUniform('u_pixelRatio', ctx.pixelRatio);
+      boxShader.setUniform('u_hoverBrighten', this.hoverBrighten);
 
-      gl.lineWidth(this.whiskerWidth);
-      gl.drawArrays(gl.LINES, 0, this.whiskerVertexCount);
+      gl.drawArrays(gl.TRIANGLES, 0, this.whiskerVertexCount);
     }
 
     // Draw box bodies
@@ -468,20 +519,19 @@ export class BoxplotRenderPass implements RenderPass {
       gl.drawArrays(gl.TRIANGLES, 0, this.boxVertexCount);
     }
 
-    // Draw median lines (on top of boxes)
+    // Draw median lines (on top of boxes) - using triangles for thick lines
     if (this.medianVertexCount > 0) {
-      const lineShader = this.lineShader!;
+      const boxShader = this.boxShader!; // Use box shader since medians are now triangles
 
       gl.bindVertexArray(this.medianVao);
-      this.setupVertexAttributes(lineShader, this.medianBuffer!);
+      this.setupVertexAttributes(boxShader, this.medianBuffer!);
 
-      lineShader.use(gl);
-      lineShader.setUniform('u_resolution', [ctx.width, ctx.height]);
-      lineShader.setUniform('u_pixelRatio', ctx.pixelRatio);
-      lineShader.setUniform('u_hoverBrighten', this.hoverBrighten);
+      boxShader.use(gl);
+      boxShader.setUniform('u_resolution', [ctx.width, ctx.height]);
+      boxShader.setUniform('u_pixelRatio', ctx.pixelRatio);
+      boxShader.setUniform('u_hoverBrighten', this.hoverBrighten);
 
-      gl.lineWidth(2); // Median line slightly thicker
-      gl.drawArrays(gl.LINES, 0, this.medianVertexCount);
+      gl.drawArrays(gl.TRIANGLES, 0, this.medianVertexCount);
     }
 
     // Draw outliers (on top of everything)

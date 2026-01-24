@@ -63,6 +63,8 @@ export interface HistogramChartOptions extends ChartOptions {
   cumulativeColor?: RGBAColor;
   /** Cumulative line width */
   cumulativeWidth?: number;
+  /** Corner radius for rounded bars (0 = square corners) */
+  cornerRadius?: number;
 }
 
 /**
@@ -329,11 +331,14 @@ export class HistogramChart extends BaseChart {
     }
 
     // Add histogram render pass
+    // Note: Access options via this.options since this.histogramOptions is set after super()
+    const histOptions = this.options as HistogramChartOptions;
     const histogramPass = new HistogramRenderPass({
       gl: this.renderer.gl,
       getShaderProgram: (id, source) => this.renderer.getShaderProgram(id, source),
       margins: this.getMargins(),
       pixelRatio: this.pixelRatio,
+      cornerRadius: histOptions?.cornerRadius,
     });
     passes.push(histogramPass);
 

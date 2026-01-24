@@ -200,10 +200,14 @@ export class AxisRenderer {
           .append('text')
           .attr('class', 'lumina-x-axis-label')
           .style('font-size', '12px')
-          .style('fill', 'var(--lumina-axis-label-color, #333)')
+          .style('font-weight', '500')
+          .style('font-family', 'Inter, system-ui, -apple-system, sans-serif')
+          .style('fill', 'var(--lumina-axis-label-color, #3f3f46)')
           .style('text-anchor', 'middle');
       }
+      // Update fill each render to pick up CSS variable changes
       this.xLabelGroup
+        .style('fill', 'var(--lumina-axis-label-color, #3f3f46)')
         .attr('x', this.margins.left + (this.width - this.margins.left - this.margins.right) / 2)
         .attr('y', this.height - 5)
         .text(this.xAxisConfig.label);
@@ -216,10 +220,14 @@ export class AxisRenderer {
           .append('text')
           .attr('class', 'lumina-y-axis-label')
           .style('font-size', '12px')
-          .style('fill', 'var(--lumina-axis-label-color, #333)')
+          .style('font-weight', '500')
+          .style('font-family', 'Inter, system-ui, -apple-system, sans-serif')
+          .style('fill', 'var(--lumina-axis-label-color, #3f3f46)')
           .style('text-anchor', 'middle');
       }
+      // Update fill each render to pick up CSS variable changes
       this.yLabelGroup
+        .style('fill', 'var(--lumina-axis-label-color, #3f3f46)')
         .attr('transform', `rotate(-90)`)
         .attr('x', -(this.margins.top + (this.height - this.margins.top - this.margins.bottom) / 2))
         .attr('y', 15)
@@ -307,30 +315,59 @@ export class AxisRenderer {
     // Check if axes should be shown
     if (this.xAxisConfig.show !== false) {
       this.xAxisGroup.call(this.xAxisGenerator as any);
-      this.styleAxisLines(this.xAxisGroup);
+      this.styleAxisLines(this.xAxisGroup, this.xAxisConfig);
     }
 
     if (this.yAxisConfig.show !== false) {
       this.yAxisGroup.call(this.yAxisGenerator as any);
-      this.styleAxisLines(this.yAxisGroup);
+      this.styleAxisLines(this.yAxisGroup, this.yAxisConfig);
     }
   }
 
   /**
    * Apply consistent styling to axis lines
    */
-  private styleAxisLines(axisGroup: Selection<SVGGElement, unknown, null, undefined>): void {
-    axisGroup
-      .selectAll('line')
-      .style('stroke', 'var(--lumina-axis-line-color, #ccc)');
+  private styleAxisLines(
+    axisGroup: Selection<SVGGElement, unknown, null, undefined>,
+    config?: AxisConfig
+  ): void {
+    const showLine = config?.showLine !== false;
+    const showTicks = config?.showTicks !== false;
+    const isMinimal = config?.labelStyle === 'minimal';
 
-    axisGroup
-      .selectAll('path')
-      .style('stroke', 'var(--lumina-axis-line-color, #ccc)');
+    // Style or hide the main axis line (path.domain)
+    if (showLine) {
+      axisGroup
+        .selectAll('path.domain')
+        .style('stroke', 'var(--lumina-axis-line-color, #ccc)')
+        .style('display', 'block');
+    } else {
+      axisGroup
+        .selectAll('path.domain')
+        .style('stroke', 'none')
+        .style('display', 'none');
+    }
 
+    // Style or hide tick lines
+    if (showTicks) {
+      axisGroup
+        .selectAll('.tick line')
+        .style('stroke', 'var(--lumina-axis-line-color, #ccc)')
+        .style('display', 'block');
+    } else {
+      axisGroup
+        .selectAll('.tick line')
+        .style('stroke', 'none')
+        .style('display', 'none');
+    }
+
+    // Style tick labels - use CSS variable for dark mode support
+    // Fallback colors are chosen for better visibility in both light and dark modes
     axisGroup
       .selectAll('text')
-      .style('fill', 'var(--lumina-axis-text-color, #666)');
+      .style('fill', 'var(--lumina-axis-text-color)')
+      .style('font-size', isMinimal ? '12px' : '11px')
+      .style('font-family', 'var(--lumina-font-family, Inter, system-ui, -apple-system, sans-serif)');
   }
 
   /**

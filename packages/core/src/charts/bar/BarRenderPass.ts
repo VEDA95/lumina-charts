@@ -10,7 +10,7 @@ import type {
   Margins,
   RGBAColor,
 } from '../../types/index.js';
-import { BAR_SHADER } from '../../shaders/bar.js';
+import { BAR_SHADER, BAR_ROUNDED_SHADER } from '../../shaders/bar.js';
 
 /**
  * Configuration for the bar render pass
@@ -24,6 +24,8 @@ export interface BarRenderPassConfig {
   margins: Margins;
   /** Pixel ratio */
   pixelRatio: number;
+  /** Corner radius for rounded bars (0 = square corners) */
+  cornerRadius?: number;
 }
 
 /**
@@ -58,8 +60,10 @@ export class BarRenderPass implements RenderPass {
   private gl: WebGL2RenderingContext;
   private getShaderProgram: BarRenderPassConfig['getShaderProgram'];
   private shader: ShaderProgram | null = null;
+  private roundedShader: ShaderProgram | null = null;
   private margins: Margins;
   private pixelRatio: number;
+  private cornerRadius: number;
 
   // GPU resources
   private vao: WebGLVertexArrayObject | null = null;
@@ -74,6 +78,7 @@ export class BarRenderPass implements RenderPass {
     this.getShaderProgram = config.getShaderProgram;
     this.margins = config.margins;
     this.pixelRatio = config.pixelRatio;
+    this.cornerRadius = config.cornerRadius ?? 0;
   }
 
   /**
@@ -84,8 +89,9 @@ export class BarRenderPass implements RenderPass {
 
     const { gl } = this;
 
-    // Get or create shader
+    // Get or create shaders (both regular and rounded)
     this.shader = this.getShaderProgram('bar', BAR_SHADER);
+    this.roundedShader = this.getShaderProgram('bar-rounded', BAR_ROUNDED_SHADER);
 
     // Create VAO
     this.vao = gl.createVertexArray();
@@ -116,10 +122,12 @@ export class BarRenderPass implements RenderPass {
 
     const { gl } = this;
     const vertices: number[] = [];
+    const useRounded = this.cornerRadius > 0;
 
     // Build vertex data for all bars
     // Each bar is 2 triangles = 6 vertices
-    // Vertex format: [x, y, r, g, b, a]
+    // Vertex format for basic: [x, y, r, g, b, a]
+    // Vertex format for rounded: [x, y, r, g, b, a, left, top, right, bottom]
     for (const bar of this.bars) {
       const { x, y, width, height, color } = bar;
       const [r, g, b, a] = color;
@@ -130,19 +138,32 @@ export class BarRenderPass implements RenderPass {
       const top = y;
       const bottom = y + height;
 
-      // Triangle 1: top-left, bottom-left, top-right
-      vertices.push(left, top, r, g, b, a);
-      vertices.push(left, bottom, r, g, b, a);
-      vertices.push(right, top, r, g, b, a);
+      if (useRounded) {
+        // Triangle 1: top-left, bottom-left, top-right (with bar bounds)
+        vertices.push(left, top, r, g, b, a, left, top, right, bottom);
+        vertices.push(left, bottom, r, g, b, a, left, top, right, bottom);
+        vertices.push(right, top, r, g, b, a, left, top, right, bottom);
 
-      // Triangle 2: top-right, bottom-left, bottom-right
-      vertices.push(right, top, r, g, b, a);
-      vertices.push(left, bottom, r, g, b, a);
-      vertices.push(right, bottom, r, g, b, a);
+        // Triangle 2: top-right, bottom-left, bottom-right (with bar bounds)
+        vertices.push(right, top, r, g, b, a, left, top, right, bottom);
+        vertices.push(left, bottom, r, g, b, a, left, top, right, bottom);
+        vertices.push(right, bottom, r, g, b, a, left, top, right, bottom);
+      } else {
+        // Triangle 1: top-left, bottom-left, top-right
+        vertices.push(left, top, r, g, b, a);
+        vertices.push(left, bottom, r, g, b, a);
+        vertices.push(right, top, r, g, b, a);
+
+        // Triangle 2: top-right, bottom-left, bottom-right
+        vertices.push(right, top, r, g, b, a);
+        vertices.push(left, bottom, r, g, b, a);
+        vertices.push(right, bottom, r, g, b, a);
+      }
     }
 
+    const floatsPerVertex = useRounded ? 10 : 6;
     const vertexData = new Float32Array(vertices);
-    this.vertexCount = vertices.length / 6; // 6 floats per vertex
+    this.vertexCount = vertices.length / floatsPerVertex;
 
     // Upload to GPU
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
@@ -189,6 +210,26 @@ export class BarRenderPass implements RenderPass {
   }
 
   /**
+   * Update corner radius
+   */
+  setCornerRadius(radius: number): void {
+    const oldRadius = this.cornerRadius;
+    this.cornerRadius = radius;
+
+    // If we're switching between rounded and non-rounded, re-upload data
+    if ((oldRadius > 0) !== (radius > 0) && this.bars.length > 0) {
+      this.uploadBarData();
+    }
+  }
+
+  /**
+   * Get current corner radius
+   */
+  getCornerRadius(): number {
+    return this.cornerRadius;
+  }
+
+  /**
    * Render the bars
    */
   render(ctx: RenderContext, _state: ChartState): void {
@@ -197,13 +238,15 @@ export class BarRenderPass implements RenderPass {
     this.ensureInitialized();
 
     const { gl } = this;
-    const shader = this.shader!;
+    const useRounded = this.cornerRadius > 0;
+    const shader = useRounded ? this.roundedShader! : this.shader!;
 
     // Setup VAO
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
-    const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
+    const floatsPerVertex = useRounded ? 10 : 6;
+    const stride = floatsPerVertex * Float32Array.BYTES_PER_ELEMENT;
 
     // a_position (vec2)
     const posLoc = shader.attributes.get('a_position');
@@ -219,12 +262,26 @@ export class BarRenderPass implements RenderPass {
       gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
     }
 
+    // a_barBounds (vec4) - only for rounded shader
+    if (useRounded) {
+      const boundsLoc = shader.attributes.get('a_barBounds');
+      if (boundsLoc !== undefined) {
+        gl.enableVertexAttribArray(boundsLoc);
+        gl.vertexAttribPointer(boundsLoc, 4, gl.FLOAT, false, stride, 6 * Float32Array.BYTES_PER_ELEMENT);
+      }
+    }
+
     // Activate shader
     shader.use(gl);
 
     // Set uniforms
     shader.setUniform('u_resolution', [ctx.width, ctx.height]);
     shader.setUniform('u_pixelRatio', ctx.pixelRatio);
+
+    // Set corner radius uniform for rounded shader
+    if (useRounded) {
+      shader.setUniform('u_cornerRadius', this.cornerRadius * this.pixelRatio);
+    }
 
     // Enable scissor test to clip to plot area
     const plotLeft = this.margins.left * this.pixelRatio;
@@ -235,8 +292,19 @@ export class BarRenderPass implements RenderPass {
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(plotLeft, ctx.height - plotTop - plotHeight, plotWidth, plotHeight);
 
+    // Enable blending for anti-aliased rounded corners
+    if (useRounded) {
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    }
+
     // Draw triangles
     gl.drawArrays(gl.TRIANGLES, 0, this.vertexCount);
+
+    // Disable blending if we enabled it
+    if (useRounded) {
+      gl.disable(gl.BLEND);
+    }
 
     // Disable scissor test
     gl.disable(gl.SCISSOR_TEST);

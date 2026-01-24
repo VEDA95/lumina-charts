@@ -34,6 +34,8 @@ export interface BarChartOptions extends ChartOptions {
   groupGap?: number;
   /** Default bar color */
   barColor?: RGBAColor;
+  /** Corner radius for rounded bars (pixels, default: 0 for square corners) */
+  cornerRadius?: number;
 }
 
 /**
@@ -73,11 +75,10 @@ export class BarChart extends BaseChart {
   private barBounds: BarData[] = [];
 
   constructor(config: BarChartConfig) {
-    const options = config.options ?? {};
-
     super(config);
 
-    this.barOptions = options;
+    // Store bar-specific options (this.options from BaseChart already has them)
+    this.barOptions = (config.options ?? {}) as BarChartOptions;
 
     // Initialize axis renderer
     this.axisRenderer = new AxisRenderer({
@@ -153,8 +154,11 @@ export class BarChart extends BaseChart {
   protected createRenderPasses(): RenderPass[] {
     const passes: RenderPass[] = [];
 
+    // Access options from this.options (set by BaseChart before createRenderPasses is called)
+    const barOptions = this.options as BarChartOptions;
+
     // Add grid render pass if enabled
-    const gridConfig = this.barOptions?.grid;
+    const gridConfig = barOptions?.grid;
     if (gridConfig !== false) {
       const showHorizontal = typeof gridConfig === 'object' ? gridConfig.show !== false : true;
       const showVertical = typeof gridConfig === 'object' ? gridConfig.show !== false : true;
@@ -164,7 +168,7 @@ export class BarChart extends BaseChart {
         getShaderProgram: (id, source) => this.renderer.getShaderProgram(id, source),
         margins: this.getMargins(),
         pixelRatio: this.pixelRatio,
-        color: this.barOptions?.gridColor,
+        color: barOptions?.gridColor,
         showHorizontal,
         showVertical,
       });
@@ -177,6 +181,7 @@ export class BarChart extends BaseChart {
       getShaderProgram: (id, source) => this.renderer.getShaderProgram(id, source),
       margins: this.getMargins(),
       pixelRatio: this.pixelRatio,
+      cornerRadius: barOptions?.cornerRadius,
     });
     passes.push(barPass);
 
@@ -495,6 +500,12 @@ export class BarChart extends BaseChart {
     if (this.axisRenderer && (options.xAxis || options.yAxis)) {
       const xConfig = options.xAxis ? { ...options.xAxis, ...this.createXAxisConfig() } : undefined;
       this.axisRenderer.updateConfig(xConfig, options.yAxis);
+    }
+
+    // Update corner radius if changed
+    if (options.cornerRadius !== undefined && this.barRenderPass) {
+      this.barOptions.cornerRadius = options.cornerRadius;
+      this.barRenderPass.setCornerRadius(options.cornerRadius);
     }
 
     // Update bar-specific options

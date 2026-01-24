@@ -90,3 +90,73 @@ void main() {
 }
 `),
 };
+
+/**
+ * Bar shader with rounded corners using SDF (Signed Distance Function)
+ * Renders smooth, anti-aliased rounded rectangles
+ */
+export const BAR_ROUNDED_SHADER: ShaderSource = {
+  vertex: buildVertexShader(`
+in vec2 a_position;  // Pixel coordinates
+in vec4 a_color;
+in vec4 a_barBounds; // left, top, right, bottom in pixels
+
+out vec4 v_color;
+out vec4 v_barBounds;
+out vec2 v_pixelPos;
+
+void main() {
+  vec2 clipPos = pixelToClip(a_position);
+  clipPos.y = -clipPos.y;
+
+  gl_Position = vec4(clipPos, 0.0, 1.0);
+  v_color = a_color;
+  v_barBounds = a_barBounds;
+  v_pixelPos = a_position;
+}
+`),
+
+  fragment: buildFragmentShader(`
+in vec4 v_color;
+in vec4 v_barBounds;
+in vec2 v_pixelPos;
+
+uniform float u_cornerRadius;
+
+out vec4 fragColor;
+
+// Signed distance function for a rounded box
+// p: point to test, center: box center, halfSize: half dimensions, radius: corner radius
+float sdRoundedBox(vec2 p, vec2 center, vec2 halfSize, float radius) {
+  vec2 q = abs(p - center) - halfSize + radius;
+  return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
+}
+
+void main() {
+  // Bar bounds: left, top, right, bottom
+  vec2 center = vec2(
+    (v_barBounds.x + v_barBounds.z) * 0.5,
+    (v_barBounds.y + v_barBounds.w) * 0.5
+  );
+  vec2 halfSize = vec2(
+    (v_barBounds.z - v_barBounds.x) * 0.5,
+    (v_barBounds.w - v_barBounds.y) * 0.5
+  );
+
+  // Clamp corner radius to not exceed half of smallest dimension
+  float maxRadius = min(halfSize.x, halfSize.y);
+  float radius = min(u_cornerRadius, maxRadius);
+
+  // Calculate signed distance
+  float dist = sdRoundedBox(v_pixelPos, center, halfSize, radius);
+
+  // Anti-alias the edge with smooth transition
+  float alpha = 1.0 - smoothstep(-1.0, 1.0, dist);
+
+  // Discard fully transparent pixels
+  if (alpha < 0.01) discard;
+
+  fragColor = vec4(v_color.rgb, v_color.a * alpha);
+}
+`),
+};

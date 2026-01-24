@@ -18,6 +18,8 @@ export interface HoverHandlerConfig {
   showTooltip?: boolean;
   /** Custom tooltip formatter */
   tooltipFormatter?: (series: Series, point: { x: number; y: number }, index: number) => string;
+  /** Tooltip style preset ('default' or 'shadcn' for dark modern style) */
+  tooltipStyle?: 'default' | 'shadcn';
 }
 
 /**
@@ -33,12 +35,18 @@ export class HoverHandler extends BaseInteractionHandler {
 
   constructor(config: HoverHandlerConfig = {}) {
     super();
+    const tooltipStyle = config.tooltipStyle ?? 'default';
     this.config = {
       maxDistance: config.maxDistance ?? 20, // pixels
       debounceMs: config.debounceMs ?? 0,
       showTooltip: config.showTooltip ?? true,
+      tooltipStyle,
       // Bind defaultTooltipFormatter to preserve 'this' context
-      tooltipFormatter: config.tooltipFormatter ?? this.defaultTooltipFormatter.bind(this),
+      tooltipFormatter:
+        config.tooltipFormatter ??
+        (tooltipStyle === 'shadcn'
+          ? this.shadcnTooltipFormatter.bind(this)
+          : this.defaultTooltipFormatter.bind(this)),
     };
   }
 
@@ -63,22 +71,48 @@ export class HoverHandler extends BaseInteractionHandler {
   private setupTooltipStyles(): void {
     if (!this.tooltipElement) return;
 
-    this.tooltipElement.style.cssText = `
-      position: absolute;
-      display: none;
-      pointer-events: none;
-      z-index: 100;
-      background: var(--lumina-tooltip-bg, rgba(0, 0, 0, 0.8));
-      color: var(--lumina-tooltip-color, #fff);
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-family: var(--lumina-font-family, system-ui, sans-serif);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-      white-space: nowrap;
-      transform: translate(-50%, -100%);
-      margin-top: -10px;
-    `;
+    if (this.config.tooltipStyle === 'shadcn') {
+      // shadcn/ui-inspired dark tooltip style
+      this.tooltipElement.className = 'lumina-tooltip';
+      this.tooltipElement.style.cssText = `
+        position: absolute;
+        display: none;
+        pointer-events: none;
+        z-index: 100;
+        background: #18181b;
+        color: #fafafa;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #27272a;
+        font-size: 12px;
+        line-height: 1.5;
+        font-family: Geist, Inter, ui-sans-serif, system-ui, sans-serif;
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "ss09" 1;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        white-space: nowrap;
+        transform: translate(-50%, -100%);
+        margin-top: -8px;
+      `;
+    } else {
+      // Default tooltip style
+      this.tooltipElement.style.cssText = `
+        position: absolute;
+        display: none;
+        pointer-events: none;
+        z-index: 100;
+        background: var(--lumina-tooltip-bg, rgba(0, 0, 0, 0.8));
+        color: var(--lumina-tooltip-color, #fff);
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-family: var(--lumina-font-family, system-ui, sans-serif);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        white-space: nowrap;
+        transform: translate(-50%, -100%);
+        margin-top: -10px;
+      `;
+    }
   }
 
   /**
@@ -272,6 +306,33 @@ export class HoverHandler extends BaseInteractionHandler {
       <div style="font-weight: 500; margin-bottom: 4px;">${series.name ?? series.id}</div>
       <div>x: ${xFormatted}</div>
       <div>y: ${yFormatted}</div>
+    `;
+  }
+
+  /**
+   * shadcn-style tooltip formatter with vertical line indicator and right-aligned values
+   */
+  private shadcnTooltipFormatter(
+    series: Series,
+    point: { x: number; y: number },
+    _index: number
+  ): string {
+    const xFormatted = this.formatValue(point.x);
+    const yFormatted = this.formatValue(point.y);
+
+    // Get the series color as a CSS color string
+    const color = series.style?.color as readonly [number, number, number, number] | undefined;
+    const colorStr = color
+      ? `rgba(${Math.round(color[0] * 255)}, ${Math.round(color[1] * 255)}, ${Math.round(color[2] * 255)}, ${color[3]})`
+      : '#60a5fa'; // Default to shadcn blue
+
+    return `
+      <div style="font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 500; color: #fafafa; margin-bottom: 8px;">${xFormatted}</div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 3px; height: 16px; border-radius: 1px; background: ${colorStr}; flex-shrink: 0;"></span>
+        <span style="color: #a1a1aa; font-size: 12px; min-width: 60px;">${series.name ?? series.id}</span>
+        <span style="font-family: 'Geist Mono', monospace; font-weight: 500; color: #fafafa; margin-left: auto;">${yFormatted}</span>
+      </div>
     `;
   }
 

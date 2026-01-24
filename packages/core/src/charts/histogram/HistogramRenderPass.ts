@@ -10,7 +10,7 @@ import type {
   Margins,
   RGBAColor,
 } from '../../types/index.js';
-import { BAR_SHADER } from '../../shaders/bar.js';
+import { BAR_SHADER, BAR_ROUNDED_SHADER } from '../../shaders/bar.js';
 import type { Bin } from './binning.js';
 
 /**
@@ -25,6 +25,8 @@ export interface HistogramRenderPassConfig {
   margins: Margins;
   /** Pixel ratio */
   pixelRatio: number;
+  /** Corner radius for rounded bars (0 = square corners) */
+  cornerRadius?: number;
 }
 
 /**
@@ -55,8 +57,10 @@ export class HistogramRenderPass implements RenderPass {
   private gl: WebGL2RenderingContext;
   private getShaderProgram: HistogramRenderPassConfig['getShaderProgram'];
   private shader: ShaderProgram | null = null;
+  private roundedShader: ShaderProgram | null = null;
   private margins: Margins;
   private pixelRatio: number;
+  private cornerRadius: number;
 
   // GPU resources
   private vao: WebGLVertexArrayObject | null = null;
@@ -71,6 +75,7 @@ export class HistogramRenderPass implements RenderPass {
     this.getShaderProgram = config.getShaderProgram;
     this.margins = config.margins;
     this.pixelRatio = config.pixelRatio;
+    this.cornerRadius = config.cornerRadius ?? 0;
   }
 
   /**
@@ -81,8 +86,9 @@ export class HistogramRenderPass implements RenderPass {
 
     const { gl } = this;
 
-    // Reuse the bar shader
+    // Get or create shaders (both regular and rounded)
     this.shader = this.getShaderProgram('histogram-bar', BAR_SHADER);
+    this.roundedShader = this.getShaderProgram('histogram-bar-rounded', BAR_ROUNDED_SHADER);
 
     // Create VAO
     this.vao = gl.createVertexArray();
@@ -95,6 +101,20 @@ export class HistogramRenderPass implements RenderPass {
     if (!this.buffer) {
       throw new Error('Failed to create buffer for histogram render pass');
     }
+  }
+
+  /**
+   * Update corner radius
+   */
+  setCornerRadius(radius: number): void {
+    this.cornerRadius = radius;
+  }
+
+  /**
+   * Get current corner radius
+   */
+  getCornerRadius(): number {
+    return this.cornerRadius;
   }
 
   /**
@@ -145,7 +165,8 @@ export class HistogramRenderPass implements RenderPass {
     this.ensureInitialized();
 
     const { gl } = this;
-    const shader = this.shader!;
+    const useRounded = this.cornerRadius > 0;
+    const shader = useRounded ? this.roundedShader! : this.shader!;
 
     // Calculate plot area
     const plotLeft = this.margins.left * this.pixelRatio;
@@ -183,19 +204,32 @@ export class HistogramRenderPass implements RenderPass {
         right = center + 0.5;
       }
 
-      // Triangle 1: top-left, bottom-left, top-right
-      vertices.push(left, top, r, g, b, a);
-      vertices.push(left, bottom, r, g, b, a);
-      vertices.push(right, top, r, g, b, a);
+      if (useRounded) {
+        // Triangle 1: top-left, bottom-left, top-right (with bar bounds)
+        vertices.push(left, top, r, g, b, a, left, top, right, bottom);
+        vertices.push(left, bottom, r, g, b, a, left, top, right, bottom);
+        vertices.push(right, top, r, g, b, a, left, top, right, bottom);
 
-      // Triangle 2: top-right, bottom-left, bottom-right
-      vertices.push(right, top, r, g, b, a);
-      vertices.push(left, bottom, r, g, b, a);
-      vertices.push(right, bottom, r, g, b, a);
+        // Triangle 2: top-right, bottom-left, bottom-right (with bar bounds)
+        vertices.push(right, top, r, g, b, a, left, top, right, bottom);
+        vertices.push(left, bottom, r, g, b, a, left, top, right, bottom);
+        vertices.push(right, bottom, r, g, b, a, left, top, right, bottom);
+      } else {
+        // Triangle 1: top-left, bottom-left, top-right
+        vertices.push(left, top, r, g, b, a);
+        vertices.push(left, bottom, r, g, b, a);
+        vertices.push(right, top, r, g, b, a);
+
+        // Triangle 2: top-right, bottom-left, bottom-right
+        vertices.push(right, top, r, g, b, a);
+        vertices.push(left, bottom, r, g, b, a);
+        vertices.push(right, bottom, r, g, b, a);
+      }
     }
 
+    const floatsPerVertex = useRounded ? 10 : 6;
     const vertexData = new Float32Array(vertices);
-    this.vertexCount = vertices.length / 6;
+    this.vertexCount = vertices.length / floatsPerVertex;
 
     if (this.vertexCount === 0) return;
 
@@ -206,7 +240,7 @@ export class HistogramRenderPass implements RenderPass {
     // Setup VAO
     gl.bindVertexArray(this.vao);
 
-    const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
+    const stride = floatsPerVertex * Float32Array.BYTES_PER_ELEMENT;
 
     // a_position (vec2)
     const posLoc = shader.attributes.get('a_position');
@@ -222,12 +256,24 @@ export class HistogramRenderPass implements RenderPass {
       gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
     }
 
+    // a_barBounds (vec4) - only for rounded shader
+    if (useRounded) {
+      const boundsLoc = shader.attributes.get('a_barBounds');
+      if (boundsLoc !== undefined) {
+        gl.enableVertexAttribArray(boundsLoc);
+        gl.vertexAttribPointer(boundsLoc, 4, gl.FLOAT, false, stride, 6 * Float32Array.BYTES_PER_ELEMENT);
+      }
+    }
+
     // Activate shader
     shader.use(gl);
 
     // Set uniforms
     shader.setUniform('u_resolution', [ctx.width, ctx.height]);
     shader.setUniform('u_pixelRatio', ctx.pixelRatio);
+    if (useRounded) {
+      shader.setUniform('u_cornerRadius', this.cornerRadius * this.pixelRatio);
+    }
 
     // Enable scissor test to clip to plot area
     gl.enable(gl.SCISSOR_TEST);

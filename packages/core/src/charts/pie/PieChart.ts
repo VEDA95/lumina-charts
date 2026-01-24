@@ -99,6 +99,7 @@ export class PieChart extends BaseChart {
       height: 100%;
       pointer-events: none;
       overflow: visible;
+      z-index: 10;
     `;
     this.getOverlayElement().appendChild(this.labelsContainer);
   }
@@ -423,10 +424,11 @@ export class PieChart extends BaseChart {
         transform: translate(${translateX}, -50%);
         font-size: ${fontSize}px;
         color: ${fontColor};
-        font-family: system-ui, sans-serif;
+        font-family: var(--lumina-font-family, system-ui, sans-serif);
         white-space: nowrap;
         text-align: ${textAlign};
         pointer-events: none;
+        z-index: 10;
       `;
 
       this.labelsContainer.appendChild(label);

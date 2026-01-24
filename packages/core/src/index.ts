@@ -126,7 +126,7 @@ export { BufferPool, createAttributeLayout, calculateStride } from './renderer/B
 export { POINT_SHADER, POINT_WITH_STROKE_SHADER, INSTANCED_POINT_SHADER } from './shaders/point.js';
 export { LINE_SHADER, SIMPLE_LINE_SHADER, DASHED_LINE_SHADER, AREA_SHADER, GRADIENT_AREA_SHADER } from './shaders/line.js';
 export { GRID_SHADER, DASHED_GRID_SHADER, CROSSHAIR_SHADER, SELECTION_SHADER, ZOOM_LENS_SHADER } from './shaders/grid.js';
-export { BAR_SHADER, BAR_WITH_BORDER_SHADER } from './shaders/bar.js';
+export { BAR_SHADER, BAR_WITH_BORDER_SHADER, BAR_ROUNDED_SHADER } from './shaders/bar.js';
 export { PIE_SHADER, PIE_WITH_BORDER_SHADER } from './shaders/pie.js';
 export { CANDLESTICK_BODY_SHADER, CANDLESTICK_WICK_SHADER, CANDLESTICK_BODY_BORDER_SHADER } from './shaders/candlestick.js';
 export { BOXPLOT_BOX_SHADER, BOXPLOT_LINE_SHADER, BOXPLOT_OUTLIER_SHADER } from './shaders/boxplot.js';
@@ -262,3 +262,23 @@ export type { ListenerOptions } from './utils/EventEmitter.js';
 export * from './utils/math.js';
 export * from './utils/dom.js';
 export * from './utils/validation.js';
+
+// Components
+export { Legend } from './components/index.js';
+export type { LegendItem, LegendOptions, LegendVisibilityCallback } from './components/index.js';
+
+// Themes
+export {
+  SHADCN_COLORS_RGBA,
+  SHADCN_COLORS_HEX,
+  SHADCN_THEME_CONFIG,
+  SHADCN_THEME_COLORS,
+  SHADCN_THEME_STYLES,
+  SHADCN_THEME,
+  SHADCN_DARK_THEME_COLORS,
+  SHADCN_DARK_THEME_CONFIG,
+  SHADCN_DARK_THEME,
+  getShadcnGridColor,
+  applyShadcnTooltipStyles,
+  formatShadcnTooltipContent,
+} from './themes/index.js';

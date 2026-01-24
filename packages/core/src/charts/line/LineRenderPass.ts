@@ -10,7 +10,7 @@ import type {
   Margins,
   RGBAColor,
 } from '../../types/index.js';
-import { SIMPLE_LINE_SHADER } from '../../shaders/line.js';
+import { SIMPLE_LINE_SHADER, GRADIENT_AREA_SHADER } from '../../shaders/line.js';
 import { POINT_SHADER } from '../../shaders/point.js';
 
 /**
@@ -51,6 +51,12 @@ export interface LineSeriesData {
   originalPositions?: Float32Array;
   /** Number of original points (for smooth lines) */
   originalPointCount?: number;
+  /** Whether to show filled area under the line */
+  showArea?: boolean;
+  /** Area fill opacity at the top (default: 0.4) */
+  areaOpacity?: number;
+  /** Whether to use gradient fill for area (default: true) */
+  areaGradient?: boolean;
 }
 
 /**
@@ -65,6 +71,7 @@ export class LineRenderPass implements RenderPass {
   private getShaderProgram: LineRenderPassConfig['getShaderProgram'];
   private shader: ShaderProgram | null = null;
   private pointShader: ShaderProgram | null = null;
+  private areaShader: ShaderProgram | null = null;
   private margins: Margins;
   private pixelRatio: number;
 
@@ -92,6 +99,19 @@ export class LineRenderPass implements RenderPass {
     }
   > = new Map();
 
+  // GPU resources per series for area fills
+  private areaBuffers: Map<
+    string,
+    {
+      vao: WebGLVertexArrayObject;
+      buffer: WebGLBuffer;
+      color: RGBAColor;
+      vertexCount: number;
+      opacity: number;
+      useGradient: boolean;
+    }
+  > = new Map();
+
   constructor(config: LineRenderPassConfig) {
     this.gl = config.gl;
     this.getShaderProgram = config.getShaderProgram;
@@ -108,6 +128,9 @@ export class LineRenderPass implements RenderPass {
     }
     if (!this.pointShader) {
       this.pointShader = this.getShaderProgram('line-points', POINT_SHADER);
+    }
+    if (!this.areaShader) {
+      this.areaShader = this.getShaderProgram('line-area', GRADIENT_AREA_SHADER);
     }
   }
 
@@ -187,6 +210,14 @@ export class LineRenderPass implements RenderPass {
     } else {
       // Remove point buffer if points are disabled
       this.removePointBuffer(data.seriesId);
+    }
+
+    // Handle area data if showArea is enabled
+    if (data.showArea) {
+      this.updateAreaData(data);
+    } else {
+      // Remove area buffer if area is disabled
+      this.removeAreaBuffer(data.seriesId);
     }
   }
 
@@ -294,6 +325,113 @@ export class LineRenderPass implements RenderPass {
   }
 
   /**
+   * Update area fill data for a series
+   */
+  private updateAreaData(data: LineSeriesData): void {
+    const { gl } = this;
+    let areaInfo = this.areaBuffers.get(data.seriesId);
+
+    const opacity = data.areaOpacity ?? 0.4;
+    const useGradient = data.areaGradient !== false;
+
+    // Create new area buffer info if needed
+    if (!areaInfo) {
+      const vao = gl.createVertexArray();
+      const buffer = gl.createBuffer();
+
+      if (!vao || !buffer) {
+        throw new Error('Failed to create WebGL area resources');
+      }
+
+      areaInfo = {
+        vao,
+        buffer,
+        color: data.color,
+        vertexCount: 0,
+        opacity,
+        useGradient,
+      };
+      this.areaBuffers.set(data.seriesId, areaInfo);
+    }
+
+    // Update area info
+    areaInfo.color = data.color;
+    areaInfo.opacity = opacity;
+    areaInfo.useGradient = useGradient;
+
+    // Build triangle strip vertices for the area
+    // For each point, we create two vertices: one at the data point, one at y=baseline
+    // Format: [x, y, normalizedY] where normalizedY is 0 at baseline, 1 at data point
+    const pointCount = data.pointCount;
+    if (pointCount < 2) {
+      areaInfo.vertexCount = 0;
+      return;
+    }
+
+    // Calculate y baseline (typically the minimum y in the domain, passed as 0 in data coords)
+    // We'll use the first point's baseline - in practice this should be domain.y[0]
+    // For now, we'll pass the positions and let the shader figure out the baseline
+
+    // Each segment creates 2 triangles = 6 vertices
+    // But using TRIANGLE_STRIP: pointCount * 2 vertices (top and bottom for each x)
+    const vertexData = new Float32Array(pointCount * 2 * 3); // x, y, normalizedY per vertex
+
+    for (let i = 0; i < pointCount; i++) {
+      const x = data.positions[i * 2];
+      const y = data.positions[i * 2 + 1];
+
+      // Bottom vertex (at y = 0, or baseline)
+      const bottomIdx = i * 2 * 3;
+      vertexData[bottomIdx] = x;
+      vertexData[bottomIdx + 1] = 0; // baseline (will be domain.y[0] in data coords)
+      vertexData[bottomIdx + 2] = 0; // normalizedY = 0 at bottom
+
+      // Top vertex (at data point)
+      const topIdx = (i * 2 + 1) * 3;
+      vertexData[topIdx] = x;
+      vertexData[topIdx + 1] = y;
+      vertexData[topIdx + 2] = 1; // normalizedY = 1 at top
+    }
+
+    areaInfo.vertexCount = pointCount * 2;
+
+    // Upload to GPU
+    gl.bindVertexArray(areaInfo.vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, areaInfo.buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.DYNAMIC_DRAW);
+
+    // Setup vertex attributes for area shader
+    const stride = 3 * Float32Array.BYTES_PER_ELEMENT;
+
+    const posLoc = this.areaShader!.attributes.get('a_position');
+    if (posLoc !== undefined) {
+      gl.enableVertexAttribArray(posLoc);
+      gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, stride, 0);
+    }
+
+    const normalizedYLoc = this.areaShader!.attributes.get('a_normalizedY');
+    if (normalizedYLoc !== undefined) {
+      gl.enableVertexAttribArray(normalizedYLoc);
+      gl.vertexAttribPointer(normalizedYLoc, 1, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+    }
+
+    gl.bindVertexArray(null);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  }
+
+  /**
+   * Remove area buffer for a series
+   */
+  private removeAreaBuffer(seriesId: string): void {
+    const areaInfo = this.areaBuffers.get(seriesId);
+    if (areaInfo) {
+      this.gl.deleteVertexArray(areaInfo.vao);
+      this.gl.deleteBuffer(areaInfo.buffer);
+      this.areaBuffers.delete(seriesId);
+    }
+  }
+
+  /**
    * Remove a series
    */
   removeSeries(seriesId: string): void {
@@ -303,8 +441,9 @@ export class LineRenderPass implements RenderPass {
       this.gl.deleteBuffer(bufferInfo.buffer);
       this.seriesBuffers.delete(seriesId);
     }
-    // Also remove point buffer
+    // Also remove point and area buffers
     this.removePointBuffer(seriesId);
+    this.removeAreaBuffer(seriesId);
   }
 
   /**
@@ -314,9 +453,12 @@ export class LineRenderPass implements RenderPass {
     for (const [seriesId] of this.seriesBuffers) {
       this.removeSeries(seriesId);
     }
-    // Ensure all point buffers are also cleared
+    // Ensure all point and area buffers are also cleared
     for (const [seriesId] of this.pointBuffers) {
       this.removePointBuffer(seriesId);
+    }
+    for (const [seriesId] of this.areaBuffers) {
+      this.removeAreaBuffer(seriesId);
     }
   }
 
@@ -363,7 +505,10 @@ export class LineRenderPass implements RenderPass {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    // Activate shader
+    // Draw area fills first (behind lines)
+    this.renderAreas(ctx, state, plotLeft, plotTop, plotRight, plotBottom);
+
+    // Activate line shader
     shader.use(gl);
 
     // Set common uniforms
@@ -390,6 +535,61 @@ export class LineRenderPass implements RenderPass {
     this.renderPoints(ctx, state, plotLeft, plotTop, plotRight, plotBottom);
 
     gl.disable(gl.SCISSOR_TEST);
+  }
+
+  /**
+   * Render area fills for all series
+   */
+  private renderAreas(
+    ctx: RenderContext,
+    state: ChartState,
+    plotLeft: number,
+    plotTop: number,
+    plotRight: number,
+    plotBottom: number
+  ): void {
+    if (this.areaBuffers.size === 0) return;
+
+    const { gl } = this;
+    const areaShader = this.areaShader!;
+
+    // Activate area shader
+    areaShader.use(gl);
+
+    // Set uniforms
+    areaShader.setUniform('u_resolution', [ctx.width, ctx.height]);
+    areaShader.setUniform('u_pixelRatio', ctx.pixelRatio);
+    areaShader.setUniform('u_domainMin', [state.domain.x[0], state.domain.y[0]]);
+    areaShader.setUniform('u_domainMax', [state.domain.x[1], state.domain.y[1]]);
+    areaShader.setUniform('u_plotBounds', [plotLeft, plotTop, plotRight, plotBottom]);
+
+    // Draw area fills for each series
+    for (const [seriesId, areaInfo] of this.areaBuffers) {
+      // Skip hidden series
+      if (!state.visibleSeries.has(seriesId)) continue;
+      if (areaInfo.vertexCount < 4) continue;
+
+      const [r, g, b, a] = areaInfo.color;
+
+      if (areaInfo.useGradient) {
+        // Gradient: solid at top, transparent at bottom
+        areaShader.setUniform('u_colorTop', [r, g, b, a]);
+        areaShader.setUniform('u_colorBottom', [r, g, b, 0]);
+        areaShader.setUniform('u_opacityTop', areaInfo.opacity);
+        areaShader.setUniform('u_opacityBottom', 0);
+      } else {
+        // Solid color with specified opacity
+        areaShader.setUniform('u_colorTop', [r, g, b, areaInfo.opacity]);
+        areaShader.setUniform('u_colorBottom', [r, g, b, areaInfo.opacity]);
+        areaShader.setUniform('u_opacityTop', 0);
+        areaShader.setUniform('u_opacityBottom', 0);
+      }
+
+      gl.bindVertexArray(areaInfo.vao);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, areaInfo.vertexCount);
+    }
+
+    gl.bindVertexArray(null);
   }
 
   /**
@@ -438,5 +638,6 @@ export class LineRenderPass implements RenderPass {
     this.clearAllSeries();
     this.shader = null;
     this.pointShader = null;
+    this.areaShader = null;
   }
 }

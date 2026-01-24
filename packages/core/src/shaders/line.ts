@@ -224,6 +224,7 @@ void main() {
 
 /**
  * Gradient area fill shader
+ * Supports both color gradient and opacity gradient modes
  */
 export const GRADIENT_AREA_SHADER: ShaderSource = {
   vertex: buildVertexShader(`
@@ -250,13 +251,24 @@ in vec2 v_position;
 
 uniform vec4 u_colorTop;
 uniform vec4 u_colorBottom;
+uniform float u_opacityTop;    // Optional opacity override at top (0.0 = use color alpha)
+uniform float u_opacityBottom; // Optional opacity override at bottom (0.0 = use color alpha)
 
 out vec4 fragColor;
 
 void main() {
   // Linear gradient from bottom to top
   vec4 color = mix(u_colorBottom, u_colorTop, v_normalizedY);
-  fragColor = color;
+
+  // Apply opacity gradient if specified (values > 0 override color alpha)
+  if (u_opacityTop > 0.0 || u_opacityBottom > 0.0) {
+    float topAlpha = u_opacityTop > 0.0 ? u_opacityTop : u_colorTop.a;
+    float bottomAlpha = u_opacityBottom > 0.0 ? u_opacityBottom : u_colorBottom.a;
+    float alpha = mix(bottomAlpha, topAlpha, v_normalizedY);
+    fragColor = vec4(color.rgb, alpha);
+  } else {
+    fragColor = color;
+  }
 }
 `),
 };
