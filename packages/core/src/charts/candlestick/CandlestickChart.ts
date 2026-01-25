@@ -196,7 +196,6 @@ export class CandlestickChart extends BaseChart {
    */
   private showTooltip(candle: Candle, event: PointerEvent | WheelEvent): void {
     const tooltip = this.getTooltipElement();
-    const orientation = this.getOrientation();
 
     // Format the date
     const date = new Date(candle.timestamp);
@@ -205,37 +204,49 @@ export class CandlestickChart extends BaseChart {
     // Format OHLC values
     const formatPrice = (price: number) => price.toFixed(2);
 
-    const content = `
-      <div style="
-        background: rgba(0, 0, 0, 0.85);
-        color: white;
-        padding: 8px 12px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-family: system-ui, sans-serif;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      ">
-        <div style="font-weight: bold; margin-bottom: 4px; color: ${candle.bullish ? '#4ade80' : '#f87171'}">
-          ${dateStr}
-        </div>
-        <div style="display: grid; grid-template-columns: auto auto; gap: 2px 12px;">
-          <span style="color: #9ca3af;">Open:</span>
-          <span>${formatPrice(candle.open)}</span>
-          <span style="color: #9ca3af;">High:</span>
-          <span>${formatPrice(candle.high)}</span>
-          <span style="color: #9ca3af;">Low:</span>
-          <span>${formatPrice(candle.low)}</span>
-          <span style="color: #9ca3af;">Close:</span>
-          <span style="color: ${candle.bullish ? '#4ade80' : '#f87171'}">${formatPrice(candle.close)}</span>
-        </div>
-        <div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid #333; color: #9ca3af;">
-          ${candle.bullish ? '▲' : '▼'} ${((candle.close - candle.open) / candle.open * 100).toFixed(2)}%
-        </div>
+    // Indicator color for bullish/bearish
+    const indicatorColor = candle.bullish ? '#4ade80' : '#f87171';
+
+    tooltip.innerHTML = `
+      <div style="font-weight: 500; margin-bottom: 8px; color: ${indicatorColor};">${dateStr}</div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
+        <span style="opacity: 0.7;">Open</span>
+        <span style="font-family: 'Geist Mono', monospace;">${formatPrice(candle.open)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
+        <span style="opacity: 0.7;">High</span>
+        <span style="font-family: 'Geist Mono', monospace;">${formatPrice(candle.high)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
+        <span style="opacity: 0.7;">Low</span>
+        <span style="font-family: 'Geist Mono', monospace;">${formatPrice(candle.low)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 4px;">
+        <span style="opacity: 0.7;">Close</span>
+        <span style="font-family: 'Geist Mono', monospace; color: ${indicatorColor};">${formatPrice(candle.close)}</span>
+      </div>
+      <div style="padding-top: 4px; border-top: 1px solid currentColor; opacity: 0.3;">
+        <span style="opacity: 1;">${candle.bullish ? '▲' : '▼'} <span style="font-family: 'Geist Mono', monospace;">${((candle.close - candle.open) / candle.open * 100).toFixed(2)}%</span></span>
       </div>
     `;
 
-    tooltip.innerHTML = content;
-    tooltip.style.display = 'block';
+    tooltip.className = 'lumina-tooltip';
+    tooltip.style.cssText = `
+      position: absolute;
+      display: block;
+      pointer-events: none;
+      z-index: 100;
+      background: #ffffff;
+      color: #09090b;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #e4e4e7;
+      font-size: 12px;
+      line-height: 1.5;
+      font-family: Geist, Inter, ui-sans-serif, system-ui, sans-serif;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      white-space: nowrap;
+    `;
 
     // Position tooltip
     const rect = this.canvas.getBoundingClientRect();

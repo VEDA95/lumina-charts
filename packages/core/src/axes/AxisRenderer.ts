@@ -159,7 +159,11 @@ export class AxisRenderer {
    */
   private applyAxisConfig(): void {
     // X-axis configuration
-    if (this.xAxisConfig.ticks?.count) {
+    if (this.xAxisConfig.ticks?.values) {
+      // Explicit tick values take precedence over count
+      this.xAxisGenerator.tickValues(this.xAxisConfig.ticks.values);
+    } else if (this.xAxisConfig.ticks?.count) {
+      this.xAxisGenerator.tickValues(null); // Reset to auto
       this.xAxisGenerator.ticks(this.xAxisConfig.ticks.count);
     }
     if (this.xAxisConfig.ticks?.size) {
@@ -174,7 +178,11 @@ export class AxisRenderer {
     }
 
     // Y-axis configuration
-    if (this.yAxisConfig.ticks?.count) {
+    if (this.yAxisConfig.ticks?.values) {
+      // Explicit tick values take precedence over count
+      this.yAxisGenerator.tickValues(this.yAxisConfig.ticks.values);
+    } else if (this.yAxisConfig.ticks?.count) {
+      this.yAxisGenerator.tickValues(null); // Reset to auto
       this.yAxisGenerator.ticks(this.yAxisConfig.ticks.count);
     }
     if (this.yAxisConfig.ticks?.size) {

@@ -74,6 +74,9 @@ export class BarChart extends BaseChart {
   // Bar bounds for hit testing (stored from last render)
   private barBounds: BarData[] = [];
 
+  // Hover state
+  private hoveredBar: BarData | null = null;
+
   constructor(config: BarChartConfig) {
     super(config);
 
@@ -94,6 +97,130 @@ export class BarChart extends BaseChart {
 
     // Initialize axis renderer
     this.initializeAxisRenderer();
+
+    // Setup hover interaction
+    this.setupHoverInteraction();
+  }
+
+  /**
+   * Setup hover interaction for tooltips
+   */
+  private setupHoverInteraction(): void {
+    this.addInteraction({
+      id: 'bar-hover',
+      enabled: true,
+      attach: () => {},
+      detach: () => {},
+      onPointerMove: (event) => {
+        const bar = this.barRenderPass.hitTest(event.x, event.y);
+
+        if (bar !== this.hoveredBar) {
+          // New bar hovered (or no bar)
+          this.hoveredBar = bar;
+
+          if (bar) {
+            this.showTooltip(bar, event.originalEvent);
+          } else {
+            this.hideTooltip();
+          }
+        } else if (bar) {
+          // Same bar, just update tooltip position
+          this.showTooltip(bar, event.originalEvent);
+        }
+      },
+    });
+  }
+
+  /**
+   * Show tooltip for a bar
+   */
+  private showTooltip(bar: BarData, event: PointerEvent | WheelEvent | TouchEvent): void {
+    const tooltip = this.getTooltipElement();
+
+    // Find the series for color and name
+    const series = this.series.find((s) => s.id === bar.seriesId);
+    const seriesName = series?.name ?? bar.seriesId;
+
+    // Get the category label
+    const categoryLabel = this.categories[bar.categoryIndex] ?? `Category ${bar.categoryIndex}`;
+
+    // Find the actual y value from series data
+    const point = series?.data.find((p) => Math.floor(p.x) === bar.categoryIndex);
+    const value = point?.y ?? 0;
+
+    // Get the bar color as CSS string
+    const [r, g, b, a] = bar.color;
+    const colorStr = `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a})`;
+
+    tooltip.innerHTML = `
+      <div style="font-weight: 500; margin-bottom: 8px;">${categoryLabel}</div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 3px; height: 16px; border-radius: 1px; background: ${colorStr}; flex-shrink: 0;"></span>
+        <span style="opacity: 0.7; font-size: 12px; min-width: 60px;">${seriesName}</span>
+        <span style="font-family: 'Geist Mono', monospace; font-weight: 500; margin-left: auto;">${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+      </div>
+    `;
+
+    tooltip.className = 'lumina-tooltip';
+    tooltip.style.cssText = `
+      position: absolute;
+      display: block;
+      pointer-events: none;
+      z-index: 100;
+      background: #ffffff;
+      color: #09090b;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #e4e4e7;
+      font-size: 12px;
+      line-height: 1.5;
+      font-family: Geist, Inter, ui-sans-serif, system-ui, sans-serif;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      white-space: nowrap;
+    `;
+
+    // Position tooltip - get client coordinates based on event type
+    const rect = this.canvas.getBoundingClientRect();
+    const offsetX = 15;
+    const offsetY = 15;
+
+    // Get client coordinates (handle TouchEvent)
+    let clientX: number;
+    let clientY: number;
+    if ('touches' in event && event.touches.length > 0) {
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    } else if ('clientX' in event) {
+      clientX = event.clientX;
+      clientY = event.clientY;
+    } else {
+      // Fallback - hide tooltip if we can't determine position
+      tooltip.style.display = 'none';
+      return;
+    }
+
+    let left = clientX - rect.left + offsetX;
+    let top = clientY - rect.top + offsetY;
+
+    // Prevent tooltip from going off-screen
+    const tooltipRect = tooltip.getBoundingClientRect();
+    if (left + tooltipRect.width > rect.width) {
+      left = clientX - rect.left - tooltipRect.width - offsetX;
+    }
+    if (top + tooltipRect.height > rect.height) {
+      top = clientY - rect.top - tooltipRect.height - offsetY;
+    }
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  }
+
+  /**
+   * Hide tooltip
+   */
+  private hideTooltip(): void {
+    const tooltip = this.getTooltipElement();
+    tooltip.style.display = 'none';
   }
 
   /**
@@ -114,6 +241,10 @@ export class BarChart extends BaseChart {
     }
 
     // For category scale, use custom formatter to show category labels
+    // Use explicit tick values to ensure ticks are placed at category centers (integers)
+    const categoryCount = this.categories.length || 1;
+    const tickValues = Array.from({ length: categoryCount }, (_, i) => i);
+
     return {
       ...baseConfig,
       formatter: (value: number) => {
@@ -125,8 +256,9 @@ export class BarChart extends BaseChart {
       },
       ticks: {
         ...baseConfig.ticks,
-        // Show ticks at category centers
-        count: this.categories.length || 5,
+        // Use explicit tick values at category centers (0, 1, 2, ...) instead of count
+        // This ensures D3 places ticks exactly at integer positions
+        values: tickValues,
       },
     };
   }
@@ -411,7 +543,9 @@ export class BarChart extends BaseChart {
           if (categoryIndex < 0 || categoryIndex >= categoryCount) continue;
 
           // Calculate bar position
-          const categoryCenterX = plotLeft + ((categoryIndex + 0.5 - domain.x[0]) / domainWidth) * plotWidth;
+          // Category center is at integer position in domain space (0, 1, 2, ...)
+          // With domain [-0.5, categoryCount-0.5], this centers bars with padding on edges
+          const categoryCenterX = plotLeft + ((categoryIndex - domain.x[0]) / domainWidth) * plotWidth;
           const groupStartX = categoryCenterX - groupWidth / 2;
           const barX = groupStartX + seriesIndex * (barWidth + barGap);
 

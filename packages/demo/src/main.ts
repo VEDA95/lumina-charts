@@ -275,7 +275,9 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
       },
     });
   } else if (type === 'line') {
-    const xScale = getXScaleType();
+    const xScaleRaw = getXScaleType();
+    // Line charts don't support band scale - fall back to linear
+    const xScale = xScaleRaw === 'band' ? 'linear' : xScaleRaw;
     const xAxisLabel = xScale === 'time' ? 'Date' : 'X Value';
 
     lineChart = new LineChart({
@@ -335,12 +337,12 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
         xAxis: {
           label: 'Value',
           ticks: { count: 10 },
-          type: getXScaleType(),
+          type: 'linear', // Histogram x-axis should always be linear
         },
         yAxis: {
           label: 'Frequency',
           ticks: { count: 8 },
-          type: getYScaleType(),
+          type: 'linear', // Histogram y-axis should always be linear
         },
         binning: { method: 'count', value: 20 },
         barGap: 1,
@@ -539,8 +541,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     chart?.addInteraction(panHandler);
     chart?.addInteraction(zoomHandler);
 
-    // Candlestick, boxplot, heatmap, and network have their own hover handling, other charts use HoverHandler
-    if (type !== 'candlestick' && type !== 'boxplot' && type !== 'heatmap' && type !== 'network') {
+    // Bar, histogram, candlestick, boxplot, heatmap, and network have their own hover handling, other charts use HoverHandler
+    if (type !== 'bar' && type !== 'histogram' && type !== 'candlestick' && type !== 'boxplot' && type !== 'heatmap' && type !== 'network') {
       const hoverHandler = new HoverHandler({ showTooltip: true, tooltipStyle: 'shadcn' });
       selectionHandler = new SelectionHandler({ mode: 'single' });
       chart?.addInteraction(hoverHandler);

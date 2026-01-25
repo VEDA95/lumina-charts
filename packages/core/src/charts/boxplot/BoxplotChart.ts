@@ -88,6 +88,11 @@ export class BoxplotChart extends BaseChart {
 
     if (orientation === 'vertical') {
       // X axis is categories for vertical charts
+      // Generate explicit tick values at integer positions to avoid duplicate labels
+      const tickValues = this.categories.length > 0
+        ? Array.from({ length: this.categories.length }, (_, i) => i)
+        : undefined;
+
       return {
         ...baseConfig,
         type: baseConfig.type ?? ('linear' as const),
@@ -100,6 +105,7 @@ export class BoxplotChart extends BaseChart {
         },
         ticks: {
           ...baseConfig.ticks,
+          values: tickValues,
           count: baseConfig.ticks?.count ?? (this.categories.length || 6),
         },
       };
@@ -135,6 +141,11 @@ export class BoxplotChart extends BaseChart {
       };
     } else {
       // Y axis is categories for horizontal charts
+      // Generate explicit tick values at integer positions to avoid duplicate labels
+      const tickValues = this.categories.length > 0
+        ? Array.from({ length: this.categories.length }, (_, i) => i)
+        : undefined;
+
       return {
         ...baseConfig,
         type: baseConfig.type ?? ('linear' as const),
@@ -147,6 +158,7 @@ export class BoxplotChart extends BaseChart {
         },
         ticks: {
           ...baseConfig.ticks,
+          values: tickValues,
           count: baseConfig.ticks?.count ?? (this.categories.length || 6),
         },
       };
@@ -218,41 +230,52 @@ export class BoxplotChart extends BaseChart {
     const formatValue = (value: number) => value.toFixed(2);
     const categoryName = box.categoryName || `Category ${box.index + 1}`;
 
-    const content = `
-      <div style="
-        background: rgba(0, 0, 0, 0.85);
-        color: white;
-        padding: 8px 12px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-family: system-ui, sans-serif;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      ">
-        <div style="font-weight: bold; margin-bottom: 4px; color: #60a5fa;">
-          ${categoryName}
-        </div>
-        <div style="display: grid; grid-template-columns: auto auto; gap: 2px 12px;">
-          <span style="color: #9ca3af;">Max:</span>
-          <span>${formatValue(box.max)}</span>
-          <span style="color: #9ca3af;">Q3:</span>
-          <span>${formatValue(box.q3)}</span>
-          <span style="color: #9ca3af;">Median:</span>
-          <span style="color: #f87171; font-weight: bold;">${formatValue(box.median)}</span>
-          <span style="color: #9ca3af;">Q1:</span>
-          <span>${formatValue(box.q1)}</span>
-          <span style="color: #9ca3af;">Min:</span>
-          <span>${formatValue(box.min)}</span>
-        </div>
-        ${box.outliers.length > 0 ? `
-        <div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid #333; color: #fb923c;">
-          Outliers: ${box.outliers.length} point${box.outliers.length > 1 ? 's' : ''}
-        </div>
-        ` : ''}
+    tooltip.innerHTML = `
+      <div style="font-weight: 500; margin-bottom: 8px; color: #60a5fa;">${categoryName}</div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
+        <span style="opacity: 0.7;">Max</span>
+        <span style="font-family: 'Geist Mono', monospace;">${formatValue(box.max)}</span>
       </div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
+        <span style="opacity: 0.7;">Q3</span>
+        <span style="font-family: 'Geist Mono', monospace;">${formatValue(box.q3)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
+        <span style="opacity: 0.7;">Median</span>
+        <span style="font-family: 'Geist Mono', monospace; color: #f87171; font-weight: 500;">${formatValue(box.median)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
+        <span style="opacity: 0.7;">Q1</span>
+        <span style="font-family: 'Geist Mono', monospace;">${formatValue(box.q1)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; gap: 12px;">
+        <span style="opacity: 0.7;">Min</span>
+        <span style="font-family: 'Geist Mono', monospace;">${formatValue(box.min)}</span>
+      </div>
+      ${box.outliers.length > 0 ? `
+      <div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid currentColor; opacity: 0.3;">
+        <span style="opacity: 1; color: #fb923c;">Outliers: <span style="font-family: 'Geist Mono', monospace;">${box.outliers.length}</span> point${box.outliers.length > 1 ? 's' : ''}</span>
+      </div>
+      ` : ''}
     `;
 
-    tooltip.innerHTML = content;
-    tooltip.style.display = 'block';
+    tooltip.className = 'lumina-tooltip';
+    tooltip.style.cssText = `
+      position: absolute;
+      display: block;
+      pointer-events: none;
+      z-index: 100;
+      background: #ffffff;
+      color: #09090b;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #e4e4e7;
+      font-size: 12px;
+      line-height: 1.5;
+      font-family: Geist, Inter, ui-sans-serif, system-ui, sans-serif;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      white-space: nowrap;
+    `;
 
     // Position tooltip
     const rect = this.canvas.getBoundingClientRect();
@@ -437,9 +460,10 @@ export class BoxplotChart extends BaseChart {
       xDomain = [-0.5, quartileData.length - 0.5];
       yDomain = [minValue - valuePadding, maxValue + valuePadding];
     } else {
-      // X is values, Y is categories
+      // X is values, Y is categories (inverted so first category is at top)
       xDomain = [minValue - valuePadding, maxValue + valuePadding];
-      yDomain = [-0.5, quartileData.length - 0.5];
+      // Invert Y domain so category 0 appears at top, last category at bottom
+      yDomain = [quartileData.length - 0.5, -0.5];
     }
 
     // Update state domain and initial domain
@@ -504,17 +528,13 @@ export class BoxplotChart extends BaseChart {
         categoryNormalized = (point.x - domain.x[0]) / (domain.x[1] - domain.x[0]);
         categoryPos = plotLeft + categoryNormalized * plotWidth;
       } else {
-        // For horizontal orientation, flip Y domain to correct pan direction
-        // Pan handler uses Y-up coords, but category axis uses Y-down (screen coords)
-        const initial = this.initialDomain;
-        if (initial) {
-          const flippedDomainY0 = initial.y[0] + initial.y[1] - domain.y[1];
-          const flippedDomainY1 = initial.y[0] + initial.y[1] - domain.y[0];
-          categoryNormalized = (point.x - flippedDomainY0) / (flippedDomainY1 - flippedDomainY0);
-        } else {
-          categoryNormalized = (point.x - domain.y[0]) / (domain.y[1] - domain.y[0]);
-        }
-        categoryPos = plotTop + categoryNormalized * plotHeight;
+        // For horizontal orientation, map category to Y position
+        // Y domain is inverted [length-0.5, -0.5] so first category is at top
+        categoryNormalized = (point.x - domain.y[0]) / (domain.y[1] - domain.y[0]);
+        // Map to screen coordinates: normalized 0 → plotTop, normalized 1 → plotBottom
+        // But D3's Y axis maps domain[0] to bottom and domain[1] to top
+        // So we need: plotBottom - normalized * plotHeight to match D3
+        categoryPos = plotBottom - categoryNormalized * plotHeight;
       }
 
       boxplots.push({
@@ -583,23 +603,8 @@ export class BoxplotChart extends BaseChart {
    * Called when domain changes (zoom/pan)
    */
   protected onDomainChange(domain: DataDomain): void {
-    const orientation = this.getOrientation();
-
-    // For horizontal orientation, flip Y domain to correct pan direction
-    let renderDomain = domain;
-    if (orientation === 'horizontal' && this.initialDomain) {
-      const initial = this.initialDomain;
-      renderDomain = {
-        x: domain.x,
-        y: [
-          initial.y[0] + initial.y[1] - domain.y[1],
-          initial.y[0] + initial.y[1] - domain.y[0],
-        ],
-      };
-    }
-
     if (this.axisRenderer) {
-      this.axisRenderer.setDomain(renderDomain);
+      this.axisRenderer.setDomain(domain);
       this.axisRenderer.render();
     }
     this.syncGridTicks();

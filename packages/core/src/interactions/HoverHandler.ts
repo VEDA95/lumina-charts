@@ -72,18 +72,18 @@ export class HoverHandler extends BaseInteractionHandler {
     if (!this.tooltipElement) return;
 
     if (this.config.tooltipStyle === 'shadcn') {
-      // shadcn/ui-inspired dark tooltip style
+      // shadcn/ui-inspired tooltip style (light mode default - CSS overrides for dark)
       this.tooltipElement.className = 'lumina-tooltip';
       this.tooltipElement.style.cssText = `
         position: absolute;
         display: none;
         pointer-events: none;
         z-index: 100;
-        background: #18181b;
-        color: #fafafa;
+        background: #ffffff;
+        color: #09090b;
         padding: 8px 12px;
         border-radius: 6px;
-        border: 1px solid #27272a;
+        border: 1px solid #e4e4e7;
         font-size: 12px;
         line-height: 1.5;
         font-family: Geist, Inter, ui-sans-serif, system-ui, sans-serif;
@@ -327,11 +327,11 @@ export class HoverHandler extends BaseInteractionHandler {
       : '#60a5fa'; // Default to shadcn blue
 
     return `
-      <div style="font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 500; color: #fafafa; margin-bottom: 8px;">${xFormatted}</div>
+      <div style="font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 500; margin-bottom: 8px;">${xFormatted}</div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <span style="width: 3px; height: 16px; border-radius: 1px; background: ${colorStr}; flex-shrink: 0;"></span>
-        <span style="color: #a1a1aa; font-size: 12px; min-width: 60px;">${series.name ?? series.id}</span>
-        <span style="font-family: 'Geist Mono', monospace; font-weight: 500; color: #fafafa; margin-left: auto;">${yFormatted}</span>
+        <span style="opacity: 0.7; font-size: 12px; min-width: 60px;">${series.name ?? series.id}</span>
+        <span style="font-family: 'Geist Mono', monospace; font-weight: 500; margin-left: auto;">${yFormatted}</span>
       </div>
     `;
   }

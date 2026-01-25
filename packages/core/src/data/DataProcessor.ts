@@ -359,9 +359,21 @@ export class DataProcessor {
   }
 
   /**
-   * Calculate data bounds for multiple series
+   * Options for calculating bounds
    */
-  calculateBounds(seriesArray: Series[], visibleOnly: boolean = true): DataDomain {
+  static readonly DEFAULT_PADDING = { x: 0.05, y: 0.05 };
+
+  /**
+   * Calculate data bounds for multiple series
+   * @param seriesArray Array of series to calculate bounds for
+   * @param visibleOnly Only include visible series (default: true)
+   * @param padding Padding as fraction of range { x: 0.05, y: 0.05 } or false for no padding
+   */
+  calculateBounds(
+    seriesArray: Series[],
+    visibleOnly: boolean = true,
+    padding: { x: number; y: number } | false = DataProcessor.DEFAULT_PADDING
+  ): DataDomain {
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
@@ -383,15 +395,22 @@ export class DataProcessor {
       return { x: [0, 1], y: [0, 1] };
     }
 
-    // Add padding
-    const xRange = maxX - minX || 1;
-    const yRange = maxY - minY || 1;
-    const xPadding = xRange * 0.05;
-    const yPadding = yRange * 0.05;
+    // Add padding if specified
+    if (padding !== false) {
+      const xRange = maxX - minX || 1;
+      const yRange = maxY - minY || 1;
+      const xPadding = xRange * padding.x;
+      const yPadding = yRange * padding.y;
+
+      return {
+        x: [minX - xPadding, maxX + xPadding],
+        y: [minY - yPadding, maxY + yPadding],
+      };
+    }
 
     return {
-      x: [minX - xPadding, maxX + xPadding],
-      y: [minY - yPadding, maxY + yPadding],
+      x: [minX, maxX],
+      y: [minY, maxY],
     };
   }
 }

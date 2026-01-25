@@ -169,6 +169,12 @@ export class LineChart extends BaseChart {
   protected onDataUpdate(series: Series[]): void {
     this.currentLODLevels.clear();
 
+    // Recalculate domain with no X padding (so lines start at axis)
+    // but keep Y padding so lines don't touch top/bottom edges
+    const bounds = this.dataProcessor.calculateBounds(series, true, { x: 0, y: 0.05 });
+    this.state.domain = bounds;
+    this.initialDomain = { x: [...bounds.x], y: [...bounds.y] };
+
     // Generate LOD levels for each series
     for (const s of series) {
       if (this.lodEnabled && s.data.length > 0) {

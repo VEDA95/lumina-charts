@@ -199,24 +199,39 @@ export class PieChart extends BaseChart {
     const tooltip = this.getTooltipElement();
     const percentStr = (slice.percentage * 100).toFixed(1);
 
+    // Get the slice color as a CSS color string
+    const color = slice.color;
+    const colorStr = `rgba(${Math.round(color[0] * 255)}, ${Math.round(color[1] * 255)}, ${Math.round(color[2] * 255)}, ${color[3]})`;
+
     tooltip.innerHTML = `
-      <div style="font-weight: 500; margin-bottom: 4px;">${slice.label}</div>
-      <div>Value: ${slice.value.toLocaleString()}</div>
-      <div>Percent: ${percentStr}%</div>
+      <div style="font-weight: 500; margin-bottom: 8px;">${slice.label}</div>
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+        <span style="width: 3px; height: 16px; border-radius: 1px; background: ${colorStr}; flex-shrink: 0;"></span>
+        <span style="opacity: 0.7;">Value</span>
+        <span style="font-family: 'Geist Mono', monospace; margin-left: auto;">${slice.value.toLocaleString()}</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 3px; height: 16px; border-radius: 1px; background: transparent; flex-shrink: 0;"></span>
+        <span style="opacity: 0.7;">Percent</span>
+        <span style="font-family: 'Geist Mono', monospace; margin-left: auto;">${percentStr}%</span>
+      </div>
     `;
 
+    tooltip.className = 'lumina-tooltip';
     tooltip.style.cssText = `
       position: fixed;
       display: block;
       pointer-events: none;
       z-index: 100;
-      background: rgba(0, 0, 0, 0.8);
-      color: #fff;
+      background: #ffffff;
+      color: #09090b;
       padding: 8px 12px;
-      border-radius: 4px;
+      border-radius: 6px;
+      border: 1px solid #e4e4e7;
       font-size: 12px;
-      font-family: system-ui, sans-serif;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      line-height: 1.5;
+      font-family: Geist, Inter, ui-sans-serif, system-ui, sans-serif;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
       white-space: nowrap;
       left: ${clientX + 10}px;
       top: ${clientY + 10}px;

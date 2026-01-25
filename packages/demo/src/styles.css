@@ -29,7 +29,7 @@
   --lumina-axis-line-color: #e4e4e7;
   --lumina-axis-text-color: #52525b;
   --lumina-axis-label-color: #27272a;
-  --lumina-grid-color: rgba(113, 113, 122, 0.15);
+  --lumina-grid-color: #d4d4d8; /* zinc-300 for visible light mode grid */
   --lumina-tooltip-bg: #18181b;
   --lumina-tooltip-color: #fafafa;
   --lumina-tooltip-border: #27272a;
@@ -45,7 +45,7 @@
   --lumina-axis-line-color: #3f3f46;
   --lumina-axis-text-color: #d4d4d8;
   --lumina-axis-label-color: #fafafa;
-  --lumina-grid-color: rgba(161, 161, 170, 0.15);
+  --lumina-grid-color: #3f3f46; /* zinc-700 for visible dark mode grid */
   --lumina-tooltip-bg: #27272a;
   --lumina-tooltip-color: #fafafa;
   --lumina-tooltip-border: #3f3f46;
@@ -120,24 +120,28 @@
   font-family: var(--lumina-font-family);
 }
 
-/* Tooltip styling override for dark mode */
-.dark .lumina-tooltip {
-  background: var(--lumina-tooltip-bg);
-  color: var(--lumina-tooltip-color);
-  border-color: var(--lumina-tooltip-border);
-}
-
 /* Tabular numerals for aligned numbers in tooltips */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "ss09" 1;
 }
 
-/* Lumina tooltip base styling */
+/* Lumina tooltip base styling - Light mode */
 .lumina-tooltip {
   font-family: "Geist", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "ss09" 1;
+  background: #ffffff !important;
+  color: #09090b !important;
+  border-color: #e4e4e7 !important;
+}
+
+/* Lumina tooltip - Dark mode (via body.dark class) */
+body.dark .lumina-tooltip,
+.dark .lumina-tooltip {
+  background: #18181b !important;
+  color: #fafafa !important;
+  border-color: #27272a !important;
 }
 
 /* Button focus ring */

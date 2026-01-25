@@ -37,8 +37,8 @@ export const SHADCN_COLORS_HEX: string[] = [
  * shadcn theme configuration object
  */
 export const SHADCN_THEME_CONFIG = {
-  /** Very faint zinc-500 grid lines */
-  grid: [0.44, 0.44, 0.48, 0.1] as RGBAColor,
+  /** Subtle zinc-300 grid lines for light mode */
+  grid: [0.83, 0.83, 0.85, 1.0] as RGBAColor, // #d4d4d8 zinc-300
   /** zinc-500 for axis labels */
   axisLabel: '#71717a',
   /** Axis line color (typically hidden) */
@@ -66,7 +66,7 @@ export const SHADCN_THEME_COLORS: ThemeColors = {
   series: SHADCN_COLORS_HEX,
   background: '#ffffff',
   foreground: '#09090b', // zinc-950
-  grid: 'rgba(113, 113, 122, 0.1)', // zinc-500 at 10%
+  grid: '#d4d4d8', // zinc-300 for visible light mode grid
   axis: '#27272a', // zinc-800
   axisLabel: '#71717a', // zinc-500
   tooltip: {
@@ -120,7 +120,7 @@ export const SHADCN_DARK_THEME_COLORS: ThemeColors = {
   series: SHADCN_COLORS_HEX,
   background: '#09090b', // zinc-950
   foreground: '#fafafa', // zinc-50
-  grid: 'rgba(161, 161, 170, 0.1)', // zinc-400 at 10%
+  grid: '#3f3f46', // zinc-700 for visible dark mode grid
   axis: '#3f3f46', // zinc-700
   axisLabel: '#a1a1aa', // zinc-400
   tooltip: {
@@ -139,8 +139,8 @@ export const SHADCN_DARK_THEME_COLORS: ThemeColors = {
  * shadcn dark mode theme config
  */
 export const SHADCN_DARK_THEME_CONFIG = {
-  /** Very faint zinc-400 grid lines */
-  grid: [0.63, 0.63, 0.67, 0.1] as RGBAColor,
+  /** Subtle zinc-700 grid lines for dark mode */
+  grid: [0.247, 0.247, 0.275, 1.0] as RGBAColor, // #3f3f46 zinc-700
   /** zinc-400 for axis labels */
   axisLabel: '#a1a1aa',
   /** Axis line color */

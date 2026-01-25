@@ -241,9 +241,17 @@ export class HeatmapChart extends BaseChart {
     const colLabel = cell.colLabel ?? `Col ${cell.col + 1}`;
     const value = cell.value;
 
+    // Get the cell color as a CSS color string
+    const color = cell.color;
+    const colorStr = `rgba(${Math.round(color[0] * 255)}, ${Math.round(color[1] * 255)}, ${Math.round(color[2] * 255)}, ${color[3]})`;
+
     const content = `
-      <div style="font-weight: bold; margin-bottom: 4px;">${colLabel}, ${rowLabel}</div>
-      <div>Value: ${value.toFixed(2)}</div>
+      <div style="font-weight: 500; margin-bottom: 8px;">${colLabel}, ${rowLabel}</div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 3px; height: 16px; border-radius: 1px; background: ${colorStr}; flex-shrink: 0;"></span>
+        <span style="opacity: 0.7;">Value</span>
+        <span style="font-family: 'Geist Mono', monospace; margin-left: auto;">${value.toFixed(2)}</span>
+      </div>
     `;
 
     this.showTooltipElement(content, clientX, clientY);
@@ -257,18 +265,21 @@ export class HeatmapChart extends BaseChart {
     if (!tooltip) {
       tooltip = document.createElement('div');
       tooltip.id = 'lumina-heatmap-tooltip';
+      tooltip.className = 'lumina-tooltip';
       tooltip.style.cssText = `
         position: fixed;
         padding: 8px 12px;
-        background: rgba(0, 0, 0, 0.85);
-        color: white;
-        border-radius: 4px;
+        background: #ffffff;
+        color: #09090b;
+        border-radius: 6px;
+        border: 1px solid #e4e4e7;
         font-size: 12px;
-        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+        font-family: Geist, Inter, ui-sans-serif, system-ui, sans-serif;
         pointer-events: none;
         z-index: 10000;
         white-space: nowrap;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
       `;
       document.body.appendChild(tooltip);
     }

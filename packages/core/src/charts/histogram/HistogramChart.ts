@@ -141,19 +141,22 @@ export class HistogramChart extends BaseChart {
     const canvas = this.canvas;
     const tooltipElement = this.getTooltipElement();
 
-    // Setup tooltip styles
+    // Setup tooltip styles (shadcn-style, light mode default - CSS overrides for dark)
+    tooltipElement.className = 'lumina-tooltip';
     tooltipElement.style.cssText = `
       position: absolute;
       display: none;
       pointer-events: none;
       z-index: 100;
-      background: rgba(0, 0, 0, 0.8);
-      color: #fff;
+      background: #ffffff;
+      color: #09090b;
       padding: 8px 12px;
-      border-radius: 4px;
+      border-radius: 6px;
+      border: 1px solid #e4e4e7;
       font-size: 12px;
-      font-family: system-ui, sans-serif;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      line-height: 1.5;
+      font-family: Geist, Inter, ui-sans-serif, system-ui, sans-serif;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
       white-space: nowrap;
       transform: translate(-50%, -100%);
       margin-top: -10px;
@@ -182,8 +185,8 @@ export class HistogramChart extends BaseChart {
 
             tooltipElement.innerHTML = `
               <div style="font-weight: 500; margin-bottom: 4px;">Bin ${hit.binIndex + 1}</div>
-              <div>Range: ${rangeStr}</div>
-              <div>Count: ${countStr} (${percentStr}%)</div>
+              <div style="display: flex; justify-content: space-between; gap: 12px;"><span style="opacity: 0.7;">Range</span><span style="font-family: 'Geist Mono', monospace;">${rangeStr}</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px;"><span style="opacity: 0.7;">Count</span><span style="font-family: 'Geist Mono', monospace;">${countStr} (${percentStr}%)</span></div>
             `;
             tooltipElement.style.display = 'block';
 
