@@ -8,7 +8,6 @@ import type {
   ChartState,
   ShaderProgram,
   Margins,
-  RGBAColor,
 } from '../../types/index.js';
 import type { Candle, CandlestickOrientation } from '../../types/candlestick.js';
 import { CANDLESTICK_BODY_SHADER, CANDLESTICK_WICK_SHADER } from '../../shaders/candlestick.js';

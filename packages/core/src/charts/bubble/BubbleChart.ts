@@ -62,7 +62,6 @@ const DEFAULT_BUBBLE_COLORS: RGBAColor[] = [
  */
 export class BubbleChart extends ScatterChart {
   private bubbleSizeConfig: BubbleSizeConfig;
-  private bubbleOpacity: number;
   private zDomain: [number, number] = [0, 1];
 
   constructor(config: BubbleChartConfig) {
@@ -77,7 +76,7 @@ export class BubbleChart extends ScatterChart {
         // Override pointSize with our z-value mapper
         pointSize: (point: DataPoint) => this.getPointSize(point),
         // Override pointColor with semi-transparent default
-        pointColor: config.options?.pointColor ?? ((point: DataPoint, index: number, series: Series) => {
+        pointColor: config.options?.pointColor ?? ((_point: DataPoint, _index: number, _series: Series) => {
           // Use series index to pick color, apply opacity
           const baseColor = DEFAULT_BUBBLE_COLORS[0];
           return [baseColor[0], baseColor[1], baseColor[2], opacity] as RGBAColor;
@@ -87,7 +86,6 @@ export class BubbleChart extends ScatterChart {
 
     super(scatterConfig);
 
-    this.bubbleOpacity = opacity;
     this.bubbleSizeConfig = {
       minSize: 4,
       maxSize: 40,

@@ -71,3 +71,5 @@ export {
   formatZodError,
   isDataSortedByX,
 } from './validation.js';
+
+export { hexToRGBA, parseColor } from './color.js';

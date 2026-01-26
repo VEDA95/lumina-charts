@@ -44,11 +44,9 @@ export interface SpatialHitResult {
  */
 export class SpatialIndex {
   private tree: RBush<IndexedPoint>;
-  private pointRadius: number;
 
-  constructor(pointRadius: number = 5) {
+  constructor(_pointRadius: number = 5) {
     this.tree = new RBush<IndexedPoint>();
-    this.pointRadius = pointRadius;
   }
 
   /**

@@ -255,7 +255,7 @@ export class DataProcessor {
     series: Series,
     baseline: number,
     fillColor: RGBAColor,
-    strokeColor?: RGBAColor
+    _strokeColor?: RGBAColor
   ): ProcessedSeriesData {
     const { data } = series;
 

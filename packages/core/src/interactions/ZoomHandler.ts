@@ -128,22 +128,21 @@ export class ZoomHandler extends BaseInteractionHandler {
     const state = this.chart.getState();
     const currentDomain = state.domain;
 
-    // Calculate current domain size
+    // Calculate domain sizes (preserve sign for inverted domains)
     const currentWidth = currentDomain.x[1] - currentDomain.x[0];
     const currentHeight = currentDomain.y[1] - currentDomain.y[0];
-
-    // Calculate initial domain size (for zoom limits)
     const initialWidth = chartInitialDomain.x[1] - chartInitialDomain.x[0];
     const initialHeight = chartInitialDomain.y[1] - chartInitialDomain.y[0];
 
-    // Guard against zero/invalid domain sizes
-    if (currentWidth <= 0 || currentHeight <= 0 || initialWidth <= 0 || initialHeight <= 0) {
+    // Guard against zero domain sizes
+    if (currentWidth === 0 || currentHeight === 0 || initialWidth === 0 || initialHeight === 0) {
       return;
     }
 
     // Calculate current zoom level relative to initial (>1 = zoomed in, <1 = zoomed out)
-    const currentZoomX = initialWidth / currentWidth;
-    const currentZoomY = initialHeight / currentHeight;
+    // Use absolute values for zoom level calculation
+    const currentZoomX = Math.abs(initialWidth) / Math.abs(currentWidth);
+    const currentZoomY = Math.abs(initialHeight) / Math.abs(currentHeight);
 
     // Calculate new zoom level after this zoom operation
     // factor > 1 = zooming out (domain gets bigger), factor < 1 = zooming in (domain gets smaller)
@@ -157,22 +156,20 @@ export class ZoomHandler extends BaseInteractionHandler {
     if (factor > 1) {
       // Zooming out - check minimum zoom level
       if (newZoomX < minZoom || newZoomY < minZoom) {
-        // Clamp to minimum zoom
         const clampedFactor = Math.min(currentZoomX / minZoom, currentZoomY / minZoom);
-        if (clampedFactor <= 1) return; // Already at or past limit
+        if (clampedFactor <= 1) return;
         factor = clampedFactor;
       }
     } else {
       // Zooming in - check maximum zoom level
       if (newZoomX > maxZoom || newZoomY > maxZoom) {
-        // Clamp to maximum zoom
         const clampedFactor = Math.max(currentZoomX / maxZoom, currentZoomY / maxZoom);
-        if (clampedFactor >= 1) return; // Already at or past limit
+        if (clampedFactor >= 1) return;
         factor = clampedFactor;
       }
     }
 
-    // Calculate new domain size
+    // Calculate new domain size (preserving sign for inverted domains)
     let newWidth = currentWidth * factor;
     let newHeight = currentHeight * factor;
 
@@ -183,45 +180,100 @@ export class ZoomHandler extends BaseInteractionHandler {
       newWidth = currentWidth;
     }
 
-    // Calculate new domain, keeping center point at same screen position
+    // Calculate the ratio (fractional position of center in domain, 0-1)
+    // This formula works for both normal and inverted domains
     const ratioX = (centerX - currentDomain.x[0]) / currentWidth;
     const ratioY = (centerY - currentDomain.y[0]) / currentHeight;
 
-    let newMinX = this.config.direction === 'y' ? currentDomain.x[0] : centerX - ratioX * newWidth;
-    let newMaxX = this.config.direction === 'y' ? currentDomain.x[1] : newMinX + newWidth;
-    let newMinY = this.config.direction === 'x' ? currentDomain.y[0] : centerY - ratioY * newHeight;
-    let newMaxY = this.config.direction === 'x' ? currentDomain.y[1] : newMinY + newHeight;
+    // Calculate new domain bounds
+    // Formula: new_start = center - ratio * new_size
+    //          new_end = center + (1 - ratio) * new_size
+    // This naturally handles inverted domains because newWidth/newHeight preserve sign
+    let newX0: number, newX1: number, newY0: number, newY1: number;
+
+    if (this.config.direction === 'y') {
+      newX0 = currentDomain.x[0];
+      newX1 = currentDomain.x[1];
+    } else {
+      newX0 = centerX - ratioX * newWidth;
+      newX1 = centerX + (1 - ratioX) * newWidth;
+    }
+
+    if (this.config.direction === 'x') {
+      newY0 = currentDomain.y[0];
+      newY1 = currentDomain.y[1];
+    } else {
+      newY0 = centerY - ratioY * newHeight;
+      newY1 = centerY + (1 - ratioY) * newHeight;
+    }
 
     // Clamp domain to stay within padded initial bounds when zoomed out
     const padding = this.config.zoomPadding;
-    const paddedMinX = chartInitialDomain.x[0] - initialWidth * padding;
-    const paddedMaxX = chartInitialDomain.x[1] + initialWidth * padding;
-    const paddedMinY = chartInitialDomain.y[0] - initialHeight * padding;
-    const paddedMaxY = chartInitialDomain.y[1] + initialHeight * padding;
+    const absInitialWidth = Math.abs(initialWidth);
+    const absInitialHeight = Math.abs(initialHeight);
 
-    // Clamp X
-    if (newMinX < paddedMinX) {
-      newMinX = paddedMinX;
-      newMaxX = newMinX + newWidth;
-    }
-    if (newMaxX > paddedMaxX) {
-      newMaxX = paddedMaxX;
-      newMinX = newMaxX - newWidth;
+    // Calculate padded bounds (works for both normal and inverted domains)
+    const paddingX = absInitialWidth * padding;
+    const paddingY = absInitialHeight * padding;
+
+    // For normal domains: padded extends [min - padding, max + padding]
+    // For inverted domains: padded extends [max + padding, min - padding]
+    const paddedX0 = chartInitialDomain.x[0] - Math.sign(initialWidth) * paddingX;
+    const paddedX1 = chartInitialDomain.x[1] + Math.sign(initialWidth) * paddingX;
+    const paddedY0 = chartInitialDomain.y[0] - Math.sign(initialHeight) * paddingY;
+    const paddedY1 = chartInitialDomain.y[1] + Math.sign(initialHeight) * paddingY;
+
+    // Clamp X domain (handle both normal and inverted)
+    const absNewWidth = Math.abs(newWidth);
+    if (initialWidth > 0) {
+      // Normal domain
+      if (newX0 < paddedX0) {
+        newX0 = paddedX0;
+        newX1 = paddedX0 + absNewWidth;
+      }
+      if (newX1 > paddedX1) {
+        newX1 = paddedX1;
+        newX0 = paddedX1 - absNewWidth;
+      }
+    } else {
+      // Inverted domain
+      if (newX0 > paddedX0) {
+        newX0 = paddedX0;
+        newX1 = paddedX0 - absNewWidth;
+      }
+      if (newX1 < paddedX1) {
+        newX1 = paddedX1;
+        newX0 = paddedX1 + absNewWidth;
+      }
     }
 
-    // Clamp Y
-    if (newMinY < paddedMinY) {
-      newMinY = paddedMinY;
-      newMaxY = newMinY + newHeight;
-    }
-    if (newMaxY > paddedMaxY) {
-      newMaxY = paddedMaxY;
-      newMinY = newMaxY - newHeight;
+    // Clamp Y domain (handle both normal and inverted)
+    const absNewHeight = Math.abs(newHeight);
+    if (initialHeight > 0) {
+      // Normal domain
+      if (newY0 < paddedY0) {
+        newY0 = paddedY0;
+        newY1 = paddedY0 + absNewHeight;
+      }
+      if (newY1 > paddedY1) {
+        newY1 = paddedY1;
+        newY0 = paddedY1 - absNewHeight;
+      }
+    } else {
+      // Inverted domain
+      if (newY0 > paddedY0) {
+        newY0 = paddedY0;
+        newY1 = paddedY0 - absNewHeight;
+      }
+      if (newY1 < paddedY1) {
+        newY1 = paddedY1;
+        newY0 = paddedY1 + absNewHeight;
+      }
     }
 
     const newDomain: DataDomain = {
-      x: [newMinX, newMaxX],
-      y: [newMinY, newMaxY],
+      x: [newX0, newX1],
+      y: [newY0, newY1],
     };
 
     // Update domain
@@ -240,12 +292,14 @@ export class ZoomHandler extends BaseInteractionHandler {
 
   /**
    * Reset zoom to initial domain
+   * @param options - Options including whether to animate (default: true if chart.options.animate is true)
    */
-  resetZoom(): void {
+  resetZoom(options?: { animate?: boolean }): void {
     if (!this.chart) return;
 
     // Use chart's resetZoom which uses the canonical initial domain
-    this.chart.resetZoom();
+    // Animate by default based on chart options
+    this.chart.resetZoom({ animate: options?.animate });
 
     // Update our reference
     this.updateInitialDomain();
@@ -266,20 +320,24 @@ export class ZoomHandler extends BaseInteractionHandler {
 
   /**
    * Zoom to a specific domain
+   * @param domain - The domain to zoom to
+   * @param options - Options including whether to animate (default: true if chart.options.animate is true)
    */
-  zoomToDomain(domain: DataDomain): void {
+  zoomToDomain(domain: DataDomain, options?: { animate?: boolean }): void {
     if (!this.chart) return;
-    this.chart.setDomain(domain);
+    this.chart.setDomain(domain, { animate: options?.animate });
   }
 
   /**
    * Zoom to fit all data
+   * @param options - Options including whether to animate (default: true if chart.options.animate is true)
    */
-  zoomToFit(): void {
+  zoomToFit(options?: { animate?: boolean }): void {
     if (!this.chart) return;
 
     // Use chart's resetZoom to go back to initial data bounds
-    this.chart.resetZoom();
+    // Animate by default based on chart options
+    this.chart.resetZoom({ animate: options?.animate });
     this.updateInitialDomain();
   }
 

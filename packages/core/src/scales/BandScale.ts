@@ -83,7 +83,7 @@ export class BandScale implements BandScaleInterface {
 
   invert(value: number): string {
     // Find the category whose band contains this value
-    const [rangeMin, rangeMax] = this.range();
+    const [rangeMin] = this.range();
     const step = this.step();
 
     if (step === 0 || this.categories.length === 0) {

@@ -2,9 +2,8 @@
  * Selection handler for point selection
  */
 
-import type { InteractionEvent, SelectConfig, SelectionEvent, DataDomain } from '../types/index.js';
+import type { InteractionEvent, SelectConfig, DataDomain } from '../types/index.js';
 import { BaseInteractionHandler } from './InteractionHandler.js';
-import type { IndexedPoint } from '../data/SpatialIndex.js';
 
 /**
  * Configuration for the selection handler

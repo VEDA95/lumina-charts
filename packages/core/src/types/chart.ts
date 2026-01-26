@@ -2,7 +2,7 @@
  * Chart configuration and state types
  */
 
-import type { DataDomain, Series, DataPoint } from './data.js';
+import type { DataDomain, DataPoint } from './data.js';
 import type { ScaleType, ScaleConfig } from './scale.js';
 import type { RGBAColor } from './theme.js';
 

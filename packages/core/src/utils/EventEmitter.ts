@@ -13,14 +13,9 @@ export class ChartEvent<T = unknown> extends CustomEvent<T> {
 }
 
 /**
- * Event handler type
+ * Event map type - any object mapping string keys to event data types
  */
-type EventHandler<T = unknown> = (event: ChartEvent<T>) => void;
-
-/**
- * Event map type
- */
-type EventMap = Record<string, unknown>;
+type EventMap = { [key: string]: unknown };
 
 /**
  * Options for event listener registration

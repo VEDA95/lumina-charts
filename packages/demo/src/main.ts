@@ -221,6 +221,8 @@ function getChartOptions() {
   const themeConfig = getThemeConfig();
   return {
     margins: { top: 20, right: 20, bottom: 50, left: 60 },
+    animate: true,
+    animationDuration: 300,
     xAxis: {
       label: 'X Value',
       ticks: { count: 10 },
@@ -263,6 +265,10 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
 
   // Clear container
   chartContainer.innerHTML = '';
+
+  // Update current chart type and scale visibility BEFORE getting options
+  currentChartType = type;
+  updateAxisScaleVisibility();
 
   const chartOptions = getChartOptions();
 
@@ -401,6 +407,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
         },
         hoverBrighten: 1.15,
         backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
+        animate: true,
+        animationDuration: 300,
       },
     });
     chart = pieChart;
@@ -414,6 +422,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
       options: {
         orientation,
         margins: { top: 20, right: 20, bottom: 50, left: 60 },
+        animate: true,
+        animationDuration: 300,
         xAxis: {
           label: orientation === 'vertical' ? 'Date' : 'Price',
           ticks: { count: 8 },
@@ -444,6 +454,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
       options: {
         orientation,
         margins: { top: 20, right: 20, bottom: 50, left: 60 },
+        animate: true,
+        animationDuration: 300,
         xAxis: {
           label: orientation === 'vertical' ? 'Category' : 'Value',
           ticks: { count: 8 },
@@ -485,6 +497,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
       container: chartContainer,
       options: {
         margins: { top: 20, right: 20, bottom: 60, left: 80 },
+        animate: true,
+        animationDuration: 300,
         xAxis: {
           label: 'Column',
           ticks: { count: 10 },
@@ -528,6 +542,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
         legendPosition: 'top-right',
         backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
         labelColor: isDarkMode ? '#fafafa' : '#18181b',
+        animate: true,
+        animationDuration: 300,
       },
     });
     chart = networkChart;
@@ -670,11 +686,6 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
   } else {
     networkOptions.classList.add('hidden');
   }
-
-  currentChartType = type;
-
-  // Update axis scale selector visibility
-  updateAxisScaleVisibility();
 }
 
 // Generate random scatter data
@@ -1324,14 +1335,14 @@ function loadData(count: number): void {
     const heatmapData = generateHeatmapData(heatmapSize, heatmapSize);
     // Set matrix data on heatmap chart
     if (heatmapChart) {
-      heatmapChart.setMatrix(heatmapData.matrix, heatmapData.rowLabels, heatmapData.colLabels);
+      heatmapChart.setMatrix(heatmapData.matrix, heatmapData.rowLabels, heatmapData.colLabels, { animate: true });
     }
     totalPoints = heatmapSize * heatmapSize;
   } else if (currentChartType === 'network') {
     const networkData = generateNetworkData(networkNodeCount);
     // Set network data on network chart
     if (networkChart) {
-      networkChart.setNetworkData(networkData);
+      networkChart.setNetworkData(networkData, { animate: true });
     }
     totalPoints = networkData.nodes.length;
   }
@@ -1352,13 +1363,13 @@ function loadData(count: number): void {
   // Render
   const startRender = performance.now();
   if (currentChartType === 'histogram' && histogramChart) {
-    histogramChart.setValues(histogramValues);
+    histogramChart.setValues(histogramValues, { animate: true });
   } else if (currentChartType === 'heatmap') {
     // Already called setMatrix above
   } else if (currentChartType === 'network') {
     // Already called setNetworkData above
   } else {
-    chart.setData(series);
+    chart.setData(series, { animate: true });
   }
   const renderTime = performance.now() - startRender;
 
@@ -1816,7 +1827,7 @@ function updateNetworkLayout(): void {
   if (!networkChart) return;
 
   const layout = networkRadial.checked ? 'radial' : 'force';
-  networkChart.setLayout(layout);
+  networkChart.setLayout(layout, { animate: true });
 
   console.log(`Network layout set to: ${layout}`);
 }

@@ -12,13 +12,14 @@ import type {
   NetworkChartConfig,
   NetworkData,
   NetworkNode,
-  NetworkEdge,
   ProcessedNode,
   ProcessedEdge,
   NetworkLayoutType,
 } from '../../types/network.js';
 import { DEFAULT_GROUP_COLORS } from '../../types/network.js';
 import { BaseChart, type BaseChartConfig } from '../BaseChart.js';
+import type { AnimationConfig } from '../../animations/index.js';
+import { NetworkAnimator } from '../../animations/NetworkAnimator.js';
 import { EdgeRenderPass } from './EdgeRenderPass.js';
 import { NodeRenderPass } from './NodeRenderPass.js';
 import { ForceLayout } from './layouts/ForceLayout.js';
@@ -86,6 +87,9 @@ export class NetworkChart extends BaseChart {
 
   // Adjacency map for quick connected node lookup
   private adjacencyMap: Map<string, Set<string>> = new Map();
+
+  // Animation
+  private networkAnimator: NetworkAnimator = new NetworkAnimator();
 
   // HTML overlays
   private labelContainer: HTMLDivElement | null = null;
@@ -188,8 +192,9 @@ export class NetworkChart extends BaseChart {
           this.setHighlightState(node);
           this.showTooltip(node, event.clientX, event.clientY);
 
-          // Emit hover event
-          this.emit('hover', {
+          // Emit hover event (network-specific format)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (this.emit as any)('hover', {
             node,
             connectedNodes: this.getConnectedNodes(node.id),
             position: { x: event.clientX, y: event.clientY },
@@ -197,7 +202,7 @@ export class NetworkChart extends BaseChart {
           });
         } else {
           this.hideTooltip();
-          this.emit('hoverEnd', {});
+          this.emit('hoverEnd', undefined);
         }
 
         this.updateRenderData();
@@ -213,7 +218,7 @@ export class NetworkChart extends BaseChart {
         this.clearHighlightState();
         this.hoveredNode = null;
         this.hideTooltip();
-        this.emit('hoverEnd', {});
+        this.emit('hoverEnd', undefined);
         this.updateRenderData();
         this.render();
       }
@@ -230,11 +235,14 @@ export class NetworkChart extends BaseChart {
         // Toggle selection
         node.selected = !node.selected;
 
-        // Emit selection event
+        // Emit selection event (network-specific format)
         const selectedNodes = this.processedNodes.filter(n => n.selected);
-        this.emit('selectionChange', {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (this.emit as any)('selectionChange', {
           selected: new Set(selectedNodes.map(n => n.id)),
           nodes: selectedNodes,
+          added: node.selected ? [node.id] : [],
+          removed: node.selected ? [] : [node.id],
         });
 
         this.updateRenderData();
@@ -511,7 +519,17 @@ export class NetworkChart extends BaseChart {
   /**
    * Set network data
    */
-  setNetworkData(data: NetworkData): void {
+  setNetworkData(
+    data: NetworkData,
+    options?: { animate?: boolean; animationConfig?: AnimationConfig }
+  ): void {
+    const hadPreviousData = this.networkData.nodes.length > 0;
+
+    // Capture current state for animation if we have existing data
+    if (hadPreviousData) {
+      this.networkAnimator.captureState(this.processedNodes);
+    }
+
     this.networkData = data;
 
     // Build adjacency map
@@ -530,11 +548,102 @@ export class NetworkChart extends BaseChart {
     // Build group color map
     this.buildGroupColorMap(data.nodes);
 
-    // Process data
+    // Process data to calculate new positions
     this.processData();
 
-    // Render
-    this.render();
+    // Determine if we should animate
+    const shouldAnimate = (options?.animate ?? this.networkOptions.animate ?? false) && hadPreviousData;
+
+    if (shouldAnimate) {
+      // Animate from old positions to new positions
+      this.animateNodes(options?.animationConfig);
+    } else {
+      // Immediate render
+      this.render();
+    }
+  }
+
+  /**
+   * Animate nodes from current captured state to new positions
+   */
+  private animateNodes(config?: AnimationConfig): void {
+    this.networkAnimator.animateTo(
+      this.processedNodes,
+      this.processedEdges,
+      (interpolatedNodes, interpolatedEdges) => {
+        // Update render passes with interpolated data
+        this.nodeRenderPass?.updateData(interpolatedNodes);
+        this.edgeRenderPass?.updateData(interpolatedEdges);
+
+        // Update labels with interpolated node positions
+        if (this.networkOptions.showLabels && this.labelContainer) {
+          this.updateLabelsWithNodes(interpolatedNodes);
+        }
+
+        this.render();
+      },
+      {
+        duration: config?.duration ?? this.networkOptions.animationDuration ?? 300,
+        easing: config?.easing,
+        onComplete: config?.onComplete,
+      }
+    );
+  }
+
+  /**
+   * Update labels based on provided node positions (for animation)
+   */
+  private updateLabelsWithNodes(nodes: ProcessedNode[]): void {
+    if (!this.labelContainer) return;
+
+    const threshold = (this.networkOptions.labelThreshold ?? DEFAULT_OPTIONS.labelThreshold) * this.pixelRatio;
+    const fontSize = this.networkOptions.labelFontSize ?? DEFAULT_OPTIONS.labelFontSize;
+    const labelColor = this.networkOptions.labelColor ?? [0.2, 0.2, 0.2, 1];
+    const [r, g, b, a] = labelColor;
+    const colorStr = `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a})`;
+
+    // Track which labels are still needed
+    const neededLabels = new Set<string>();
+
+    for (const node of nodes) {
+      // Skip if node is too small or has no label
+      if (node.radius < threshold || !node.label) {
+        continue;
+      }
+
+      const key = node.id;
+      neededLabels.add(key);
+
+      let label = this.labelElements.get(key);
+      if (!label) {
+        label = document.createElement('div');
+        label.style.cssText = `
+          position: absolute;
+          transform: translate(-50%, -50%);
+          font-family: system-ui, sans-serif;
+          pointer-events: none;
+          white-space: nowrap;
+          text-shadow: 0 0 3px white, 0 0 3px white, 0 0 3px white;
+        `;
+        this.labelContainer.appendChild(label);
+        this.labelElements.set(key, label);
+      }
+
+      label.textContent = node.label;
+      label.style.color = colorStr;
+      label.style.fontSize = `${fontSize}px`;
+      // Position below the node
+      label.style.left = `${node.pixelX / this.pixelRatio}px`;
+      label.style.top = `${(node.pixelY + node.radius + 8) / this.pixelRatio}px`;
+    }
+
+    // Remove labels that are no longer needed
+    for (const [key, label] of this.labelElements) {
+      if (!neededLabels.has(key)) {
+        label.remove();
+        this.labelElements.delete(key);
+      }
+    }
   }
 
   /**
@@ -715,12 +824,28 @@ export class NetworkChart extends BaseChart {
 
   /**
    * Switch layout algorithm
+   * @param layout - The layout type to switch to
+   * @param options - Animation options
    */
-  setLayout(layout: NetworkLayoutType): void {
+  setLayout(
+    layout: NetworkLayoutType,
+    options?: { animate?: boolean; animationConfig?: AnimationConfig }
+  ): void {
     if (layout !== this.currentLayout) {
+      // Capture current state for animation
+      this.networkAnimator.captureState(this.processedNodes);
+
       this.currentLayout = layout;
       this.processData();
-      this.render();
+
+      // Determine if we should animate
+      const shouldAnimate = options?.animate ?? this.networkOptions.animate ?? false;
+
+      if (shouldAnimate && this.processedNodes.length > 0) {
+        this.animateNodes(options?.animationConfig);
+      } else {
+        this.render();
+      }
     }
   }
 
@@ -759,9 +884,12 @@ export class NetworkChart extends BaseChart {
 
     if (hadSelection) {
       this.updateRenderData();
-      this.emit('selectionChange', {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (this.emit as any)('selectionChange', {
         selected: new Set<string>(),
         nodes: [],
+        added: [],
+        removed: [],
       });
       this.render();
     }
@@ -932,6 +1060,9 @@ export class NetworkChart extends BaseChart {
    * Dispose resources
    */
   dispose(): void {
+    // Cancel any ongoing animation
+    this.networkAnimator.cancel();
+
     this.hideTooltip();
 
     if (this.labelContainer) {

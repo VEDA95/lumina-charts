@@ -6,7 +6,7 @@ import { axisBottom, axisLeft, type Axis } from 'd3-axis';
 import { select, type Selection } from 'd3-selection';
 import type { Margins, DataDomain, AxisConfig, ScaleType } from '../types/index.js';
 import { ScaleFactory, LinearScale, LogScale, PowScale, SymlogScale, TimeScale, BandScale } from '../scales/index.js';
-import type { Scale, ContinuousScale } from '../types/scale.js';
+import type { Scale } from '../types/scale.js';
 
 /**
  * Configuration for the axis renderer
@@ -31,7 +31,6 @@ export class AxisRenderer {
   private container: HTMLElement;
   private svg: SVGSVGElement;
   private margins: Margins;
-  private pixelRatio: number;
 
   // D3 selections
   private svgSelection: Selection<SVGSVGElement, unknown, null, undefined>;
@@ -59,7 +58,6 @@ export class AxisRenderer {
   constructor(config: AxisRendererConfig) {
     this.container = config.container;
     this.margins = config.margins;
-    this.pixelRatio = config.pixelRatio ?? 1;
     this.xAxisConfig = config.xAxis ?? {};
     this.yAxisConfig = config.yAxis ?? {};
 
@@ -73,7 +71,7 @@ export class AxisRenderer {
       width: 100%;
       height: 100%;
       pointer-events: none;
-      overflow: visible;
+      overflow: hidden;
     `;
     this.container.appendChild(this.svg);
 
@@ -320,16 +318,57 @@ export class AxisRenderer {
    * Render the axes
    */
   render(): void {
+    const plotLeft = this.margins.left;
+    const plotRight = this.width - this.margins.right;
+    const plotTop = this.margins.top;
+    const plotBottom = this.height - this.margins.bottom;
+
     // Check if axes should be shown
     if (this.xAxisConfig.show !== false) {
       this.xAxisGroup.call(this.xAxisGenerator as any);
       this.styleAxisLines(this.xAxisGroup, this.xAxisConfig);
+      // Hide X-axis ticks outside plot area
+      this.hideOutOfBoundsTicks(this.xAxisGroup, 'x', plotLeft, plotRight);
     }
 
     if (this.yAxisConfig.show !== false) {
       this.yAxisGroup.call(this.yAxisGenerator as any);
       this.styleAxisLines(this.yAxisGroup, this.yAxisConfig);
+      // Hide Y-axis ticks outside plot area
+      this.hideOutOfBoundsTicks(this.yAxisGroup, 'y', plotTop, plotBottom);
     }
+  }
+
+  /**
+   * Hide ticks that are outside the visible plot area
+   */
+  private hideOutOfBoundsTicks(
+    axisGroup: Selection<SVGGElement, unknown, null, undefined>,
+    axis: 'x' | 'y',
+    min: number,
+    max: number
+  ): void {
+    axisGroup.selectAll('.tick').each(function() {
+      const tick = select(this);
+      const transform = tick.attr('transform');
+      if (!transform) return;
+
+      // Parse the translate value from transform attribute
+      const match = transform.match(/translate\(([^,)]+)(?:,([^)]+))?\)/);
+      if (!match) return;
+
+      const position = axis === 'x'
+        ? parseFloat(match[1])
+        : parseFloat(match[2] || match[1]);
+
+      // Hide tick if outside bounds (with small tolerance for edge cases)
+      const tolerance = 1;
+      if (position < min - tolerance || position > max + tolerance) {
+        tick.style('display', 'none');
+      } else {
+        tick.style('display', null);
+      }
+    });
   }
 
   /**

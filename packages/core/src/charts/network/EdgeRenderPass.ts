@@ -49,7 +49,6 @@ export class EdgeRenderPass implements RenderPass {
   private vertexCount: number = 0;
 
   // Config
-  private margins: Margins;
   private pixelRatio: number;
   private dimOpacity: number;
   private bezierSegments: number;
@@ -63,17 +62,16 @@ export class EdgeRenderPass implements RenderPass {
   constructor(config: EdgeRenderPassConfig) {
     this.gl = config.gl;
     this.getShaderProgram = config.getShaderProgram;
-    this.margins = config.margins;
     this.pixelRatio = config.pixelRatio;
     this.dimOpacity = config.dimOpacity ?? 0.15;
     this.bezierSegments = config.bezierSegments ?? 20;
   }
 
   /**
-   * Set margins
+   * Set margins (currently unused for network edges)
    */
-  setMargins(margins: Margins): void {
-    this.margins = margins;
+  setMargins(_margins: Margins): void {
+    // Network edges don't use margins - they render in the full viewport
   }
 
   /**
@@ -170,7 +168,7 @@ export class EdgeRenderPass implements RenderPass {
     cx: number, cy: number,
     x1: number, y1: number,
     width: number,
-    color: [number, number, number, number],
+    color: readonly [number, number, number, number],
     highlighted: boolean
   ): number[] {
     const vertices: number[] = [];

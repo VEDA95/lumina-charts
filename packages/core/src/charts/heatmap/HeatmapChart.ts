@@ -13,12 +13,13 @@ import type {
   HeatmapChartConfig,
   HeatmapCell,
   HeatmapDataPoint,
-  HeatmapMatrixData,
   ColorScaleConfig,
   ColorScaleType,
 } from '../../types/heatmap.js';
-import { SEQUENTIAL_BLUE, VIRIDIS } from '../../types/heatmap.js';
+import { SEQUENTIAL_BLUE } from '../../types/heatmap.js';
 import { BaseChart, type BaseChartConfig } from '../BaseChart.js';
+import type { AnimationConfig } from '../../animations/index.js';
+import { easeOut } from '../../animations/easing.js';
 import { HeatmapRenderPass } from './HeatmapRenderPass.js';
 import { GridRenderPass } from '../GridRenderPass.js';
 import { AxisRenderer } from '../../axes/AxisRenderer.js';
@@ -58,6 +59,9 @@ export class HeatmapChart extends BaseChart {
   private labelContainer: HTMLDivElement | null = null;
   private labelElements: Map<string, HTMLDivElement> = new Map();
 
+  // Animation state for crossfade
+  private animationFrame: number | null = null;
+
   constructor(config: HeatmapChartConfig) {
     const options = config.options ?? {};
 
@@ -95,11 +99,17 @@ export class HeatmapChart extends BaseChart {
   private createXAxisConfig() {
     const baseConfig = this.heatmapOptions?.xAxis ?? {};
 
+    // Generate explicit tick values at integer positions (cell centers)
+    const tickValues = this.numCols > 0
+      ? Array.from({ length: this.numCols }, (_, i) => i)
+      : undefined;
+
     return {
       ...baseConfig,
       type: baseConfig.type ?? ('linear' as const),
-      formatter: (value: number) => {
-        const index = Math.round(value);
+      formatter: (value: number | string | Date) => {
+        const numValue = typeof value === 'number' ? value : 0;
+        const index = Math.round(numValue);
         if (index >= 0 && index < this.colLabels.length) {
           return this.colLabels[index];
         }
@@ -107,6 +117,7 @@ export class HeatmapChart extends BaseChart {
       },
       ticks: {
         ...baseConfig.ticks,
+        values: baseConfig.ticks?.values ?? tickValues,
         count: baseConfig.ticks?.count ?? (this.numCols || 6),
       },
     };
@@ -118,11 +129,17 @@ export class HeatmapChart extends BaseChart {
   private createYAxisConfig() {
     const baseConfig = this.heatmapOptions?.yAxis ?? {};
 
+    // Generate explicit tick values at integer positions (cell centers)
+    const tickValues = this.numRows > 0
+      ? Array.from({ length: this.numRows }, (_, i) => i)
+      : undefined;
+
     return {
       ...baseConfig,
       type: baseConfig.type ?? ('linear' as const),
-      formatter: (value: number) => {
-        const index = Math.round(value);
+      formatter: (value: number | string | Date) => {
+        const numValue = typeof value === 'number' ? value : 0;
+        const index = Math.round(numValue);
         if (index >= 0 && index < this.rowLabels.length) {
           return this.rowLabels[index];
         }
@@ -130,6 +147,7 @@ export class HeatmapChart extends BaseChart {
       },
       ticks: {
         ...baseConfig.ticks,
+        values: baseConfig.ticks?.values ?? tickValues,
         count: baseConfig.ticks?.count ?? (this.numRows || 6),
       },
     };
@@ -174,15 +192,16 @@ export class HeatmapChart extends BaseChart {
           cell.hovered = true;
           this.showTooltip(cell, event.clientX, event.clientY);
 
-          // Emit hover event for demo compatibility
-          this.emit('hover', {
+          // Emit hover event for demo compatibility (heatmap-specific format)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (this.emit as any)('hover', {
             point: { x: cell.col, y: cell.row },
             cell,
             position: { x: event.clientX, y: event.clientY },
           });
         } else {
           this.hideTooltip();
-          this.emit('hoverEnd', {});
+          this.emit('hoverEnd', undefined);
         }
 
         // Re-upload data with updated hover state
@@ -199,7 +218,7 @@ export class HeatmapChart extends BaseChart {
         this.hoveredCell.hovered = false;
         this.hoveredCell = null;
         this.hideTooltip();
-        this.emit('hoverEnd', {});
+        this.emit('hoverEnd', undefined);
         this.heatmapRenderPass.updateData(this.cells);
         this.render();
       }
@@ -216,11 +235,14 @@ export class HeatmapChart extends BaseChart {
         // Toggle selection
         cell.selected = !cell.selected;
 
-        // Emit selection event
+        // Emit selection event (heatmap-specific format)
         const selectedCells = this.cells.filter(c => c.selected);
-        this.emit('selectionChange', {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (this.emit as any)('selectionChange', {
           selected: new Set(selectedCells.map(c => `${c.row}-${c.col}`)),
           cells: selectedCells,
+          added: cell.selected ? [`${cell.row}-${cell.col}`] : [],
+          removed: cell.selected ? [] : [`${cell.row}-${cell.col}`],
         });
 
         this.heatmapRenderPass.updateData(this.cells);
@@ -365,9 +387,134 @@ export class HeatmapChart extends BaseChart {
   }
 
   /**
+   * Override setData to handle heatmap-specific animation (color interpolation)
+   * Domain animation doesn't work well for heatmaps since cells are repositioned.
+   */
+  override setData(
+    series: Series[],
+    options?: { animate?: boolean; animationConfig?: AnimationConfig }
+  ): void {
+    const hadPreviousData = this.series.length > 0 && this.cells.length > 0;
+
+    // Cancel any running animation
+    if (this.animationFrame !== null) {
+      cancelAnimationFrame(this.animationFrame);
+      this.animationFrame = null;
+    }
+
+    // Store old cell colors BEFORE processing new data (keyed by row-col)
+    const oldColorMap = new Map<string, RGBAColor>();
+    if (hadPreviousData) {
+      for (const cell of this.cells) {
+        oldColorMap.set(`${cell.row}-${cell.col}`, [...cell.color] as RGBAColor);
+      }
+    }
+
+    // Update series data
+    this.series = series;
+
+    // Update visible series set
+    this.state.visibleSeries = new Set(series.filter((s) => s.visible !== false).map((s) => s.id));
+
+    // Process data (calculate new cells with new colors)
+    this.onDataUpdate(series);
+
+    // Store new cell colors (these are the TARGET colors)
+    const newColorMap = new Map<string, RGBAColor>();
+    for (const cell of this.cells) {
+      newColorMap.set(`${cell.row}-${cell.col}`, [...cell.color] as RGBAColor);
+    }
+
+    // Emit data update event
+    this.emit('dataUpdate', {
+      data: series,
+      previousData: this.series,
+      timestamp: Date.now(),
+    });
+
+    // Determine if we should animate
+    const shouldAnimate = (options?.animate ?? this.heatmapOptions.animate ?? false) && hadPreviousData;
+
+    if (shouldAnimate && oldColorMap.size > 0) {
+      // Animate with color interpolation
+      this.animateColorTransition(oldColorMap, newColorMap, options?.animationConfig);
+    } else {
+      // Immediate render
+      this.render();
+    }
+  }
+
+  /**
+   * Animate color transition from old colors to new colors
+   */
+  private animateColorTransition(
+    oldColorMap: Map<string, RGBAColor>,
+    newColorMap: Map<string, RGBAColor>,
+    config?: AnimationConfig
+  ): void {
+    const duration = config?.duration ?? this.heatmapOptions.animationDuration ?? 300;
+    const easingFn = config?.easing ?? easeOut;
+    const startTime = performance.now();
+
+    const animate = () => {
+      const elapsed = performance.now() - startTime;
+      const rawProgress = Math.min(elapsed / duration, 1);
+      const easedProgress = easingFn(rawProgress);
+
+      // Interpolate colors for each cell
+      for (const cell of this.cells) {
+        const key = `${cell.row}-${cell.col}`;
+        const oldColor = oldColorMap.get(key);
+        const newColor = newColorMap.get(key);
+
+        if (oldColor && newColor) {
+          // Interpolate between old and new color
+          cell.color = [
+            oldColor[0] + (newColor[0] - oldColor[0]) * easedProgress,
+            oldColor[1] + (newColor[1] - oldColor[1]) * easedProgress,
+            oldColor[2] + (newColor[2] - oldColor[2]) * easedProgress,
+            oldColor[3] + (newColor[3] - oldColor[3]) * easedProgress,
+          ];
+        } else if (newColor) {
+          // New cell - fade in from transparent
+          cell.color = [newColor[0], newColor[1], newColor[2], newColor[3] * easedProgress];
+        }
+        // Cells that existed before but not now are already removed by onDataUpdate
+      }
+
+      this.heatmapRenderPass.updateData(this.cells);
+      this.render();
+
+      if (rawProgress < 1) {
+        this.animationFrame = requestAnimationFrame(animate);
+      } else {
+        this.animationFrame = null;
+        // Ensure final colors are exactly the target colors
+        for (const cell of this.cells) {
+          const key = `${cell.row}-${cell.col}`;
+          const newColor = newColorMap.get(key);
+          if (newColor) {
+            cell.color = [...newColor] as RGBAColor;
+          }
+        }
+        this.heatmapRenderPass.updateData(this.cells);
+        this.render();
+        config?.onComplete?.();
+      }
+    };
+
+    this.animationFrame = requestAnimationFrame(animate);
+  }
+
+  /**
    * Set matrix data (dense format)
    */
-  setMatrix(matrix: number[][], rowLabels?: string[], colLabels?: string[]): void {
+  setMatrix(
+    matrix: number[][],
+    rowLabels?: string[],
+    colLabels?: string[],
+    options?: { animate?: boolean; animationConfig?: AnimationConfig }
+  ): void {
     this.numRows = matrix.length;
     this.numCols = matrix[0]?.length ?? 0;
     this.rowLabels = rowLabels ?? [];
@@ -384,12 +531,12 @@ export class HeatmapChart extends BaseChart {
       }
     }
 
-    // Use standard setData
+    // Use our overridden setData with animation options
     this.setData([{
       id: 'heatmap',
       name: 'Heatmap',
       data: data as unknown as { x: number; y: number }[],
-    }]);
+    }], options);
   }
 
   /**
@@ -691,9 +838,12 @@ export class HeatmapChart extends BaseChart {
 
     if (hadSelection) {
       this.heatmapRenderPass.updateData(this.cells);
-      this.emit('selectionChange', {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (this.emit as any)('selectionChange', {
         selected: new Set<string>(),
         cells: [],
+        added: [],
+        removed: [],
       });
       this.render();
     }
@@ -846,6 +996,12 @@ export class HeatmapChart extends BaseChart {
    * Dispose resources
    */
   dispose(): void {
+    // Cancel any running animation
+    if (this.animationFrame !== null) {
+      cancelAnimationFrame(this.animationFrame);
+      this.animationFrame = null;
+    }
+
     this.hideTooltip();
 
     if (this.labelContainer) {

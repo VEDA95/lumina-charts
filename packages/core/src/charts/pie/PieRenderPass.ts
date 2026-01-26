@@ -2,7 +2,7 @@
  * Pie render pass for drawing pie/donut chart wedges
  */
 
-import type { RenderPass, RenderContext, ChartState, ShaderProgram, RGBAColor } from '../../types/index.js';
+import type { RenderPass, RenderContext, ChartState, ShaderProgram } from '../../types/index.js';
 import type { PieSlice } from '../../types/pie.js';
 import { PIE_SHADER } from '../../shaders/pie.js';
 

@@ -15,6 +15,9 @@ import type {
   BandScaleConfig,
   ContinuousScale,
 } from '../types/scale.js';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyScale = Scale<any, number>;
 import { LinearScale } from './LinearScale.js';
 import { LogScale } from './LogScale.js';
 import { PowScale } from './PowScale.js';
@@ -29,7 +32,7 @@ export class ScaleFactory {
   /**
    * Create a scale from a configuration object
    */
-  static create(config: ScaleConfig): Scale {
+  static create(config: ScaleConfig): AnyScale {
     if (config.type === 'linear') {
       return new LinearScale(config as LinearScaleConfig);
     }
@@ -65,7 +68,7 @@ export class ScaleFactory {
   /**
    * Create a scale from a type string with default configuration
    */
-  static fromType(type: ScaleType): Scale {
+  static fromType(type: ScaleType): AnyScale {
     return ScaleFactory.create({ type } as ScaleConfig);
   }
 

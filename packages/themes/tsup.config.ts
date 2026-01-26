@@ -13,5 +13,4 @@ export default defineConfig({
   treeshake: true,
   splitting: false,
   minify: false,
-  external: ['d3-array', 'd3-axis', 'd3-scale', 'd3-selection', 'rbush'],
 });

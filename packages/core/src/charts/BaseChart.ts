@@ -19,6 +19,7 @@ import { WebGLRenderer } from '../renderer/WebGLRenderer.js';
 import { DataProcessor } from '../data/DataProcessor.js';
 import { SpatialIndex } from '../data/SpatialIndex.js';
 import { LODManager } from '../data/LODManager.js';
+import { DomainAnimator, type AnimationConfig } from '../animations/index.js';
 
 /**
  * Configuration for creating a chart
@@ -34,12 +35,19 @@ export interface BaseChartConfig {
  * Internal event map for chart events
  */
 interface ChartEventMap {
+  [key: string]: unknown;
   click: PointerEvent;
   hover: HoverEvent;
   hoverEnd: undefined;
-  selectionChange: { selected: Set<string>; added: string[]; removed: string[] };
-  zoom: { domain: DataDomain; factor: number };
-  pan: { domain: DataDomain; delta: { x: number; y: number } };
+  selectionChange: {
+    selected: Set<string>;
+    added: string[];
+    removed: string[];
+    bounds?: DataDomain;
+    timestamp?: number;
+  };
+  zoom: { domain: DataDomain; factor: number; center?: { x: number; y: number }; direction?: string; timestamp?: number; originalEvent?: Event };
+  pan: { domain: DataDomain; delta: { x: number; y: number }; timestamp?: number; originalEvent?: Event };
   dataUpdate: DataUpdateEvent;
   resize: ResizeEvent;
   render: undefined;
@@ -121,6 +129,9 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
   // Interactions
   protected interactions: Map<string, InteractionHandler> = new Map();
 
+  // Animation
+  protected readonly domainAnimator: DomainAnimator;
+
   // Lifecycle
   private resizeObserver: ResizeObserver;
   private abortController: AbortController;
@@ -155,6 +166,9 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
     this.dataProcessor = new DataProcessor();
     this.spatialIndex = new SpatialIndex();
     this.lodManager = new LODManager();
+
+    // Initialize animation
+    this.domainAnimator = new DomainAnimator();
 
     // Initialize state
     this.state = this.createInitialState();
@@ -432,18 +446,30 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
 
   /**
    * Set chart data
+   * @param series - The series data to set
+   * @param options - Options including animation settings
    */
-  setData(series: Series[]): void {
+  setData(series: Series[], options?: { animate?: boolean; animationConfig?: AnimationConfig }): void {
     const previousData = this.series;
     this.series = series;
 
     // Update visible series set
     this.state.visibleSeries = new Set(series.filter((s) => s.visible !== false).map((s) => s.id));
 
-    // Calculate bounds
-    const bounds = this.dataProcessor.calculateBounds(series);
-    this.state.domain = bounds;
-    this.initialDomain = { x: [...bounds.x], y: [...bounds.y] };
+    // Calculate default bounds (may be overridden by subclass in onDataUpdate)
+    const defaultBounds = this.dataProcessor.calculateBounds(series);
+
+    // Store the domain BEFORE onDataUpdate for animation starting point
+    // This is the domain we'll animate FROM if animation is enabled
+    const domainBeforeUpdate: DataDomain = {
+      x: [this.state.domain.x[0], this.state.domain.x[1]],
+      y: [this.state.domain.y[0], this.state.domain.y[1]],
+    };
+
+    // Store initial domain before onDataUpdate so we can detect if subclass changed it
+    const initialDomainBefore: DataDomain | null = this.initialDomain
+      ? { x: [this.initialDomain.x[0], this.initialDomain.x[1]], y: [this.initialDomain.y[0], this.initialDomain.y[1]] }
+      : null;
 
     // Build spatial index
     this.spatialIndex.build(
@@ -454,7 +480,29 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
     );
 
     // Process data for GPU (subclass handles this)
+    // Subclasses like BarChart, CandlestickChart, LineChart, etc. may set their own domain here
+    // They typically set BOTH this.state.domain AND this.initialDomain
     this.onDataUpdate(series);
+
+    // Check if subclass set its own domain in onDataUpdate
+    // Detection: if initialDomain changed (or was set from null)
+    const subclassSetDomain =
+      this.initialDomain !== null &&
+      (initialDomainBefore === null ||
+        this.initialDomain.x[0] !== initialDomainBefore.x[0] ||
+        this.initialDomain.x[1] !== initialDomainBefore.x[1] ||
+        this.initialDomain.y[0] !== initialDomainBefore.y[0] ||
+        this.initialDomain.y[1] !== initialDomainBefore.y[1]);
+
+    // Use subclass domain if it was set, otherwise use default bounds
+    const targetDomain: DataDomain = subclassSetDomain
+      ? { x: [this.initialDomain!.x[0], this.initialDomain!.x[1]], y: [this.initialDomain!.y[0], this.initialDomain!.y[1]] }
+      : defaultBounds;
+
+    // If subclass didn't set initialDomain, set it now
+    if (!subclassSetDomain) {
+      this.initialDomain = { x: [targetDomain.x[0], targetDomain.x[1]], y: [targetDomain.y[0], targetDomain.y[1]] };
+    }
 
     // Emit data update event
     this.emit('dataUpdate', {
@@ -463,8 +511,29 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
       timestamp: Date.now(),
     });
 
-    // Re-render
-    this.render();
+    // Update domain - animate if requested and there was previous data
+    const shouldAnimate = (options?.animate ?? this.options.animate ?? false) && previousData.length > 0;
+
+    // Check if domain actually changed (comparing pre-update domain to target)
+    // Note: subclass may have already set state.domain, but we need to check against
+    // the domain we had BEFORE onDataUpdate to know if we need to animate
+    const domainChanged =
+      domainBeforeUpdate.x[0] !== targetDomain.x[0] ||
+      domainBeforeUpdate.x[1] !== targetDomain.x[1] ||
+      domainBeforeUpdate.y[0] !== targetDomain.y[0] ||
+      domainBeforeUpdate.y[1] !== targetDomain.y[1];
+
+    if (shouldAnimate && domainChanged) {
+      // Restore the old domain so animation can transition from it
+      this.state.domain = domainBeforeUpdate;
+      // Use animated setDomain to transition from old domain to target
+      this.setDomain(targetDomain, { animate: true, animationConfig: options?.animationConfig });
+    } else {
+      // Ensure domain is set to target (subclass may have already done this)
+      this.state.domain = targetDomain;
+      this.onDomainChange(targetDomain);
+      this.render();
+    }
   }
 
   /**
@@ -497,11 +566,38 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
 
   /**
    * Update chart domain (visible area)
+   * @param domain - The new domain to set
+   * @param options - Options including animation settings
    */
-  setDomain(domain: DataDomain): void {
-    this.state.domain = domain;
-    this.onDomainChange(domain);
-    this.render();
+  setDomain(domain: DataDomain, options?: { animate?: boolean; animationConfig?: AnimationConfig }): void {
+    // Cancel any running animation
+    this.domainAnimator.cancel();
+
+    if (options?.animate && this.options.animate !== false) {
+      // Animate to the new domain
+      const from = this.state.domain;
+      const duration = options.animationConfig?.duration ?? this.options.animationDuration ?? 300;
+
+      this.domainAnimator.animateTo(
+        from,
+        domain,
+        (interpolatedDomain) => {
+          this.state.domain = interpolatedDomain;
+          this.onDomainChange(interpolatedDomain);
+          this.render();
+        },
+        {
+          duration,
+          easing: options.animationConfig?.easing,
+          onComplete: options.animationConfig?.onComplete,
+        }
+      );
+    } else {
+      // Immediate update
+      this.state.domain = domain;
+      this.onDomainChange(domain);
+      this.render();
+    }
   }
 
   /**
@@ -523,10 +619,15 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
 
   /**
    * Reset zoom to the initial/default level
+   * @param options - Options including animation settings
    */
-  resetZoom(): void {
+  resetZoom(options?: { animate?: boolean; animationConfig?: AnimationConfig }): void {
     if (this.initialDomain) {
-      this.setDomain({ x: [...this.initialDomain.x], y: [...this.initialDomain.y] });
+      const shouldAnimate = options?.animate ?? this.options.animate ?? false;
+      this.setDomain(
+        { x: [...this.initialDomain.x], y: [...this.initialDomain.y] },
+        { animate: shouldAnimate, animationConfig: options?.animationConfig }
+      );
     }
   }
 
@@ -779,6 +880,9 @@ export abstract class BaseChart extends EventEmitter<ChartEventMap> {
   dispose(): void {
     if (this.isDisposed) return;
     this.isDisposed = true;
+
+    // Cancel any running animations
+    this.domainAnimator.cancel();
 
     // Abort all event listeners
     this.abortController.abort();

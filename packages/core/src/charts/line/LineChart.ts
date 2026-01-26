@@ -16,8 +16,8 @@ import { BaseChart, type BaseChartConfig } from '../BaseChart.js';
 import { LineRenderPass } from './LineRenderPass.js';
 import { GridRenderPass } from '../GridRenderPass.js';
 import { AxisRenderer } from '../../axes/AxisRenderer.js';
-import type { LODLevel } from '../../data/LODManager.js';
 import { catmullRomSpline, type Point2D } from '../../utils/math.js';
+import { parseColor } from '../../utils/color.js';
 
 /**
  * Line chart specific options
@@ -229,7 +229,8 @@ export class LineChart extends BaseChart {
 
       // Get color for this series
       const defaultColor = DEFAULT_COLORS[seriesIndex % DEFAULT_COLORS.length];
-      const color: RGBAColor = s.style?.color ?? this.lineOptions.lineColor ?? defaultColor;
+      const rawColor = s.style?.color ?? this.lineOptions.lineColor ?? defaultColor;
+      const color: RGBAColor = typeof rawColor === 'string' ? parseColor(rawColor) : rawColor;
 
       // Get line width
       const lineWidth = s.style?.lineWidth ?? this.lineOptions.lineWidth ?? 2;
@@ -484,7 +485,12 @@ export class LineChart extends BaseChart {
     }
     const cssX = pixelX / this.pixelRatio;
     const cssY = pixelY / this.pixelRatio;
-    return this.axisRenderer.pixelToData(cssX, cssY);
+    const coords = this.axisRenderer.pixelToData(cssX, cssY);
+    // Coerce values to numbers for line charts
+    return {
+      x: typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
+      y: typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
+    };
   }
 
   /**

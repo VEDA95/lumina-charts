@@ -79,8 +79,8 @@ export class LogScale implements ContinuousScale {
     return copied;
   }
 
-  nice(count?: number): this {
-    this.d3Scale.nice(count);
+  nice(_count?: number): this {
+    this.d3Scale.nice();
     return this;
   }
 

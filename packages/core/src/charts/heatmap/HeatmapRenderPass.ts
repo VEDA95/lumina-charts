@@ -201,7 +201,7 @@ export class HeatmapRenderPass implements RenderPass {
   /**
    * Render the heatmap cells
    */
-  render(ctx: RenderContext, state: ChartState): void {
+  render(ctx: RenderContext, _state: ChartState): void {
     if (!this.enabled || this.vertexCount === 0 || !this.shader) return;
 
     this.ensureInitialized();

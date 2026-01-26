@@ -295,7 +295,7 @@ export class HistogramRenderPass implements RenderPass {
   hitTest(
     pixelX: number,
     pixelY: number,
-    ctx: RenderContext,
+    ctx: { width: number; height: number },
     state: ChartState
   ): HistogramBarData | null {
     const plotLeft = this.margins.left * this.pixelRatio;

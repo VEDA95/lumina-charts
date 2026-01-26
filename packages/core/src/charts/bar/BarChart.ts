@@ -15,6 +15,7 @@ import { BaseChart, type BaseChartConfig } from '../BaseChart.js';
 import { BarRenderPass, type BarData } from './BarRenderPass.js';
 import { GridRenderPass } from '../GridRenderPass.js';
 import { AxisRenderer } from '../../axes/AxisRenderer.js';
+import { parseColor } from '../../utils/color.js';
 
 /**
  * Bar chart specific options
@@ -247,8 +248,9 @@ export class BarChart extends BaseChart {
 
     return {
       ...baseConfig,
-      formatter: (value: number) => {
-        const index = Math.round(value);
+      formatter: (value: number | string | Date) => {
+        const numValue = typeof value === 'number' ? value : 0;
+        const index = Math.round(numValue);
         if (index >= 0 && index < this.categories.length) {
           return this.categories[index];
         }
@@ -483,8 +485,8 @@ export class BarChart extends BaseChart {
       // Generate bars for each series and data point
       for (let seriesIndex = 0; seriesIndex < visibleSeries.length; seriesIndex++) {
         const s = visibleSeries[seriesIndex];
-        const color: RGBAColor =
-          s.style?.color ?? this.barOptions.barColor ?? DEFAULT_COLORS[seriesIndex % DEFAULT_COLORS.length];
+        const rawColor = s.style?.color ?? this.barOptions.barColor ?? DEFAULT_COLORS[seriesIndex % DEFAULT_COLORS.length];
+        const color: RGBAColor = typeof rawColor === 'string' ? parseColor(rawColor) : rawColor;
 
         for (const point of s.data) {
           // Convert x value (timestamp) to pixel position
@@ -535,8 +537,8 @@ export class BarChart extends BaseChart {
       // Generate bars for each series and category
       for (let seriesIndex = 0; seriesIndex < visibleSeries.length; seriesIndex++) {
         const s = visibleSeries[seriesIndex];
-        const color: RGBAColor =
-          s.style?.color ?? this.barOptions.barColor ?? DEFAULT_COLORS[seriesIndex % DEFAULT_COLORS.length];
+        const rawColor = s.style?.color ?? this.barOptions.barColor ?? DEFAULT_COLORS[seriesIndex % DEFAULT_COLORS.length];
+        const color: RGBAColor = typeof rawColor === 'string' ? parseColor(rawColor) : rawColor;
 
         for (const point of s.data) {
           const categoryIndex = Math.floor(point.x);
@@ -709,7 +711,12 @@ export class BarChart extends BaseChart {
     }
     const cssX = pixelX / this.pixelRatio;
     const cssY = pixelY / this.pixelRatio;
-    return this.axisRenderer.pixelToData(cssX, cssY);
+    const coords = this.axisRenderer.pixelToData(cssX, cssY);
+    // Coerce values to numbers for bar charts
+    return {
+      x: typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
+      y: typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
+    };
   }
 
   /**

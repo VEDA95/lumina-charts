@@ -9,10 +9,9 @@ import type {
   GridConfig,
   RGBAColor,
   DataDomain,
-  HoverEvent,
-  Series,
 } from '../../types/index.js';
 import { BaseChart, type BaseChartConfig } from '../BaseChart.js';
+import type { AnimationConfig } from '../../animations/index.js';
 import { HistogramRenderPass, type HistogramBarData } from './HistogramRenderPass.js';
 import { HistogramLinePass, type OverlayCurve } from './HistogramLinePass.js';
 import { GridRenderPass } from '../GridRenderPass.js';
@@ -360,9 +359,10 @@ export class HistogramChart extends BaseChart {
   /**
    * Set histogram data values
    */
-  setValues(values: number[]): void {
+  setValues(values: number[], options?: { animate?: boolean; animationConfig?: AnimationConfig }): void {
+    const hadPreviousData = this.values.length > 0;
     this.values = values;
-    this.processData();
+    this.processData(options?.animate && hadPreviousData, options?.animationConfig);
     this.render();
   }
 
@@ -431,8 +431,10 @@ export class HistogramChart extends BaseChart {
 
   /**
    * Process data: compute bins and overlays
+   * @param animate - Whether to animate the domain transition
+   * @param animationConfig - Animation configuration
    */
-  private processData(): void {
+  private processData(animate?: boolean, animationConfig?: AnimationConfig): void {
     if (this.values.length === 0) {
       this.binResult = null;
       this.kdeCurve = [];
@@ -462,8 +464,9 @@ export class HistogramChart extends BaseChart {
     maxCount = maxCount * 1.1 || 1;
     const yDomain: [number, number] = [0, maxCount];
 
-    // Update state domain and initial domain (for zoom reset)
-    this.state.domain = { x: xDomain, y: yDomain };
+    const newDomain: DataDomain = { x: xDomain, y: yDomain };
+
+    // Update initial domain (for zoom reset)
     this.initialDomain = { x: [...xDomain], y: [...yDomain] };
 
     // Calculate overlays
@@ -472,11 +475,17 @@ export class HistogramChart extends BaseChart {
     // Update render pass
     this.updateHistogramData();
 
-    // Update axis renderer
-    if (this.axisRenderer) {
-      this.axisRenderer.setDomain(this.state.domain);
-      this.axisRenderer.render();
-      this.syncGridTicks();
+    // Update domain - use animation if requested
+    const shouldAnimate = animate && this.options.animate !== false;
+    if (shouldAnimate) {
+      this.setDomain(newDomain, { animate: true, animationConfig });
+    } else {
+      this.state.domain = newDomain;
+      if (this.axisRenderer) {
+        this.axisRenderer.setDomain(this.state.domain);
+        this.axisRenderer.render();
+        this.syncGridTicks();
+      }
     }
   }
 
@@ -707,7 +716,12 @@ export class HistogramChart extends BaseChart {
     }
     const cssX = pixelX / this.pixelRatio;
     const cssY = pixelY / this.pixelRatio;
-    return this.axisRenderer.pixelToData(cssX, cssY);
+    const coords = this.axisRenderer.pixelToData(cssX, cssY);
+    // For histograms, coerce values to numbers
+    return {
+      x: typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
+      y: typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
+    };
   }
 
   /**

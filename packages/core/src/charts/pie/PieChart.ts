@@ -4,8 +4,10 @@
 
 import type { RenderPass, Series, DataPoint, RGBAColor } from '../../types/index.js';
 import type { PieChartOptions, PieChartConfig, PieSlice } from '../../types/pie.js';
+import type { AnimationConfig } from '../../animations/index.js';
 import { BaseChart, type BaseChartConfig } from '../BaseChart.js';
 import { PieRenderPass } from './PieRenderPass.js';
+import { PieAnimator } from '../../animations/PieAnimator.js';
 
 /**
  * Default slice colors
@@ -36,8 +38,12 @@ export class PieChart extends BaseChart {
 
   // Slice data
   private slices: PieSlice[] = [];
+  private previousSlices: PieSlice[] = [];
   private hoveredSliceIndex: number | null = null;
   private selectedSliceIndex: number | null = null;
+
+  // Animation
+  private pieAnimator: PieAnimator = new PieAnimator();
 
   // Labels overlay
   private labelsContainer: HTMLDivElement | null = null;
@@ -247,9 +253,97 @@ export class PieChart extends BaseChart {
   }
 
   /**
-   * Called when data is updated
+   * Override setData to handle pie-specific animations (slice transitions instead of domain)
    */
-  protected onDataUpdate(series: Series[]): void {
+  override setData(
+    series: Series[],
+    options?: { animate?: boolean; animationConfig?: AnimationConfig }
+  ): void {
+    const hadPreviousData = this.series.length > 0 && this.slices.length > 0;
+
+    // Store previous slices for animation
+    this.previousSlices = [...this.slices];
+
+    // Update series data
+    this.series = series;
+
+    // Update visible series set
+    this.state.visibleSeries = new Set(series.filter((s) => s.visible !== false).map((s) => s.id));
+
+    // Process data (calculate new slices)
+    this.processDataUpdate(series);
+
+    // Emit data update event
+    this.emit('dataUpdate', {
+      data: series,
+      previousData: this.series,
+      timestamp: Date.now(),
+    });
+
+    // Determine if we should animate
+    const shouldAnimate = (options?.animate ?? this.pieOptions.animate ?? false) && hadPreviousData;
+
+    if (shouldAnimate && this.previousSlices.length > 0) {
+      // Animate from old slices to new slices
+      this.animateSlices(this.previousSlices, this.slices, options?.animationConfig);
+    } else {
+      // Immediate update
+      this.uploadSlicesToGPU();
+      this.updateLabels();
+      this.render();
+    }
+  }
+
+  /**
+   * Animate from old slices to new slices
+   */
+  private animateSlices(
+    fromSlices: PieSlice[],
+    toSlices: PieSlice[],
+    config?: AnimationConfig
+  ): void {
+    // Configure animator with current settings
+    this.pieAnimator.setStartAngle(this.pieOptions.startAngle ?? -90);
+    this.pieAnimator.setPadAngle(this.pieOptions.padAngle ?? 0);
+
+    this.pieAnimator.animateTo(
+      fromSlices,
+      toSlices,
+      (interpolatedSlices, _progress) => {
+        // Update slices with interpolated values
+        this.slices = interpolatedSlices;
+        this.uploadSlicesToGPU();
+        this.updateLabels();
+        this.render();
+      },
+      {
+        duration: config?.duration ?? this.pieOptions.animationDuration ?? 300,
+        easing: config?.easing,
+        onComplete: config?.onComplete,
+      },
+      this.selectedSliceIndex,
+      this.hoveredSliceIndex
+    );
+  }
+
+  /**
+   * Upload current slices to GPU
+   */
+  private uploadSlicesToGPU(): void {
+    this.pieRenderPass.updateData(
+      this.slices,
+      this.centerX,
+      this.centerY,
+      this.innerRadius,
+      this.outerRadius,
+      this.pieOptions.explodeOffset ?? 0
+    );
+  }
+
+  /**
+   * Process data update (without animation - just calculate new slices)
+   */
+  private processDataUpdate(series: Series[]): void {
     if (series.length === 0 || series[0].data.length === 0) {
       this.slices = [];
       this.pieRenderPass.clear();
@@ -261,18 +355,15 @@ export class PieChart extends BaseChart {
 
     // Calculate slices from data
     this.slices = this.calculateSlices(series[0].data);
+  }
 
-    // Upload to render pass
-    this.pieRenderPass.updateData(
-      this.slices,
-      this.centerX,
-      this.centerY,
-      this.innerRadius,
-      this.outerRadius,
-      this.pieOptions.explodeOffset ?? 0
-    );
-
-    // Update labels
+  /**
+   * Called when data is updated (called by base class setData, but we override setData)
+   * Kept for compatibility but main logic is in processDataUpdate
+   */
+  protected onDataUpdate(series: Series[]): void {
+    this.processDataUpdate(series);
+    this.uploadSlicesToGPU();
     this.updateLabels();
   }
 
@@ -632,6 +723,8 @@ export class PieChart extends BaseChart {
    * Clean up resources
    */
   dispose(): void {
+    // Cancel any ongoing animation
+    this.pieAnimator.cancel();
     if (this.labelsContainer) {
       this.labelsContainer.remove();
     }

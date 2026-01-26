@@ -76,7 +76,8 @@ export class TimeScale implements TimeScaleInterface {
   }
 
   tickFormat(count?: number, specifier?: string): (value: Date | number) => string {
-    return this.d3Scale.tickFormat(count, specifier);
+    const formatter = this.d3Scale.tickFormat(count, specifier);
+    return (value: Date | number) => formatter(value instanceof Date ? value : new Date(value));
   }
 
   isValidDomainValue(value: Date | number): boolean {

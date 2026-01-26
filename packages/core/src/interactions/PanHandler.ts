@@ -26,10 +26,23 @@ export interface PanHandlerConfig extends Partial<PanConfig> {
 /**
  * Handler for click-drag panning
  */
+/**
+ * Internal config type where modifierKey remains optional
+ */
+type InternalPanConfig = {
+  enabled: boolean;
+  button: 0 | 1 | 2;
+  modifierKey?: 'ctrl' | 'alt' | 'shift' | 'meta';
+  momentum: boolean;
+  friction: number;
+  disableAtDefaultZoom: boolean;
+  panPadding: number;
+};
+
 export class PanHandler extends BaseInteractionHandler {
   readonly id = 'pan';
 
-  private config: Required<PanHandlerConfig>;
+  private config: InternalPanConfig;
   private isDragging: boolean = false;
   private lastPosition: { x: number; y: number } | null = null;
   private lastDataPosition: { x: number; y: number } | null = null;
@@ -115,19 +128,21 @@ export class PanHandler extends BaseInteractionHandler {
 
     const padding = this.config.panPadding;
 
-    // Calculate the current view size
+    // Calculate domain sizes (preserve sign for inverted domains)
     const viewWidth = domain.x[1] - domain.x[0];
     const viewHeight = domain.y[1] - domain.y[0];
+    const initialWidth = initialDomain.x[1] - initialDomain.x[0];
+    const initialHeight = initialDomain.y[1] - initialDomain.y[0];
 
     // Calculate allowed padding in data units
-    const paddingX = viewWidth * padding;
-    const paddingY = viewHeight * padding;
+    const paddingX = Math.abs(viewWidth) * padding;
+    const paddingY = Math.abs(viewHeight) * padding;
 
-    // Calculate bounds: initial domain with padding based on current view size
-    const minX = initialDomain.x[0] - paddingX;
-    const maxX = initialDomain.x[1] + paddingX;
-    const minY = initialDomain.y[0] - paddingY;
-    const maxY = initialDomain.y[1] + paddingY;
+    // Calculate padded bounds (works for both normal and inverted domains)
+    const paddedX0 = initialDomain.x[0] - Math.sign(initialWidth) * paddingX;
+    const paddedX1 = initialDomain.x[1] + Math.sign(initialWidth) * paddingX;
+    const paddedY0 = initialDomain.y[0] - Math.sign(initialHeight) * paddingY;
+    const paddedY1 = initialDomain.y[1] + Math.sign(initialHeight) * paddingY;
 
     // Clamp the domain while preserving view size
     let clampedX0 = domain.x[0];
@@ -135,24 +150,53 @@ export class PanHandler extends BaseInteractionHandler {
     let clampedY0 = domain.y[0];
     let clampedY1 = domain.y[1];
 
-    // Clamp X axis
-    if (clampedX0 < minX) {
-      clampedX0 = minX;
-      clampedX1 = minX + viewWidth;
-    }
-    if (clampedX1 > maxX) {
-      clampedX1 = maxX;
-      clampedX0 = maxX - viewWidth;
+    const absViewWidth = Math.abs(viewWidth);
+    const absViewHeight = Math.abs(viewHeight);
+
+    // Clamp X axis (handle both normal and inverted)
+    if (initialWidth > 0) {
+      // Normal domain
+      if (clampedX0 < paddedX0) {
+        clampedX0 = paddedX0;
+        clampedX1 = paddedX0 + absViewWidth;
+      }
+      if (clampedX1 > paddedX1) {
+        clampedX1 = paddedX1;
+        clampedX0 = paddedX1 - absViewWidth;
+      }
+    } else {
+      // Inverted domain
+      if (clampedX0 > paddedX0) {
+        clampedX0 = paddedX0;
+        clampedX1 = paddedX0 - absViewWidth;
+      }
+      if (clampedX1 < paddedX1) {
+        clampedX1 = paddedX1;
+        clampedX0 = paddedX1 + absViewWidth;
+      }
     }
 
-    // Clamp Y axis
-    if (clampedY0 < minY) {
-      clampedY0 = minY;
-      clampedY1 = minY + viewHeight;
-    }
-    if (clampedY1 > maxY) {
-      clampedY1 = maxY;
-      clampedY0 = maxY - viewHeight;
+    // Clamp Y axis (handle both normal and inverted)
+    if (initialHeight > 0) {
+      // Normal domain
+      if (clampedY0 < paddedY0) {
+        clampedY0 = paddedY0;
+        clampedY1 = paddedY0 + absViewHeight;
+      }
+      if (clampedY1 > paddedY1) {
+        clampedY1 = paddedY1;
+        clampedY0 = paddedY1 - absViewHeight;
+      }
+    } else {
+      // Inverted domain
+      if (clampedY0 > paddedY0) {
+        clampedY0 = paddedY0;
+        clampedY1 = paddedY0 - absViewHeight;
+      }
+      if (clampedY1 < paddedY1) {
+        clampedY1 = paddedY1;
+        clampedY0 = paddedY1 + absViewHeight;
+      }
     }
 
     return {
@@ -220,7 +264,7 @@ export class PanHandler extends BaseInteractionHandler {
   /**
    * Handle pointer up - end drag
    */
-  onPointerUp(event: InteractionEvent): void {
+  onPointerUp(_event: InteractionEvent): void {
     if (!this.isDragging) return;
 
     this.isDragging = false;

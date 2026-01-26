@@ -96,8 +96,9 @@ export class BoxplotChart extends BaseChart {
       return {
         ...baseConfig,
         type: baseConfig.type ?? ('linear' as const),
-        formatter: (value: number) => {
-          const index = Math.round(value);
+        formatter: (value: number | string | Date) => {
+          const numValue = typeof value === 'number' ? value : 0;
+          const index = Math.round(numValue);
           if (index >= 0 && index < this.categories.length) {
             return this.categories[index];
           }
@@ -149,8 +150,9 @@ export class BoxplotChart extends BaseChart {
       return {
         ...baseConfig,
         type: baseConfig.type ?? ('linear' as const),
-        formatter: (value: number) => {
-          const index = Math.round(value);
+        formatter: (value: number | string | Date) => {
+          const numValue = typeof value === 'number' ? value : 0;
+          const index = Math.round(numValue);
           if (index >= 0 && index < this.categories.length) {
             return this.categories[index];
           }
@@ -224,7 +226,7 @@ export class BoxplotChart extends BaseChart {
   /**
    * Show tooltip for a boxplot
    */
-  private showTooltip(box: Boxplot, event: PointerEvent | WheelEvent): void {
+  private showTooltip(box: Boxplot, event: PointerEvent | WheelEvent | TouchEvent): void {
     const tooltip = this.getTooltipElement();
 
     const formatValue = (value: number) => value.toFixed(2);
@@ -282,16 +284,30 @@ export class BoxplotChart extends BaseChart {
     const offsetX = 15;
     const offsetY = 15;
 
-    let left = event.clientX - rect.left + offsetX;
-    let top = event.clientY - rect.top + offsetY;
+    // Get clientX/clientY from event (handle TouchEvent differently)
+    let clientX: number, clientY: number;
+    if ('touches' in event && event.touches.length > 0) {
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    } else if ('clientX' in event) {
+      clientX = event.clientX;
+      clientY = event.clientY;
+    } else {
+      // Fallback
+      clientX = 0;
+      clientY = 0;
+    }
+
+    let left = clientX - rect.left + offsetX;
+    let top = clientY - rect.top + offsetY;
 
     // Prevent tooltip from going off-screen
     const tooltipRect = tooltip.getBoundingClientRect();
     if (left + tooltipRect.width > rect.width) {
-      left = event.clientX - rect.left - tooltipRect.width - offsetX;
+      left = clientX - rect.left - tooltipRect.width - offsetX;
     }
     if (top + tooltipRect.height > rect.height) {
-      top = event.clientY - rect.top - tooltipRect.height - offsetY;
+      top = clientY - rect.top - tooltipRect.height - offsetY;
     }
 
     tooltip.style.left = `${left}px`;
@@ -732,7 +748,12 @@ export class BoxplotChart extends BaseChart {
     }
     const cssX = pixelX / this.pixelRatio;
     const cssY = pixelY / this.pixelRatio;
-    return this.axisRenderer.pixelToData(cssX, cssY);
+    const coords = this.axisRenderer.pixelToData(cssX, cssY);
+    // Coerce values to numbers for boxplot charts
+    return {
+      x: typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
+      y: typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
+    };
   }
 
   /**

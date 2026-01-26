@@ -17,6 +17,7 @@ import { BaseChart, type BaseChartConfig } from '../BaseChart.js';
 import { ScatterRenderPass } from './ScatterRenderPass.js';
 import { GridRenderPass } from '../GridRenderPass.js';
 import { AxisRenderer } from '../../axes/AxisRenderer.js';
+import { parseColor } from '../../utils/color.js';
 
 /**
  * Point shape types
@@ -250,7 +251,7 @@ export class ScatterChart extends BaseChart {
   /**
    * Get series data at current LOD level
    */
-  private getSeriesDataAtLOD(series: Series, seriesIndex: number): Series {
+  private getSeriesDataAtLOD(series: Series, _seriesIndex: number): Series {
     if (!this.lodEnabled || !this.lodManager.hasLevels(series.id)) return series;
 
     // Select appropriate LOD level based on viewport and domain
@@ -340,7 +341,7 @@ export class ScatterChart extends BaseChart {
   ): (point: DataPoint, index: number, series: Series) => RGBAColor {
     // Check if series has a style color defined
     if (series.style?.color) {
-      const seriesColor = series.style.color;
+      const seriesColor = parseColor(series.style.color);
       return () => seriesColor;
     }
 
@@ -522,7 +523,12 @@ export class ScatterChart extends BaseChart {
     // Convert from device pixels to CSS pixels for axis renderer
     const cssX = pixelX / this.pixelRatio;
     const cssY = pixelY / this.pixelRatio;
-    return this.axisRenderer.pixelToData(cssX, cssY);
+    const coords = this.axisRenderer.pixelToData(cssX, cssY);
+    // For scatter charts, coerce values to numbers (handles time scale timestamps)
+    return {
+      x: typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
+      y: typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
+    };
   }
 
   /**

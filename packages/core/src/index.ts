@@ -282,3 +282,16 @@ export {
   applyShadcnTooltipStyles,
   formatShadcnTooltipContent,
 } from './themes/index.js';
+
+// Animations
+export {
+  DomainAnimator,
+  linear,
+  easeOut,
+  easeIn,
+  easeInOut,
+  easeOutQuad,
+  easeInQuad,
+  easeInOutQuad,
+} from './animations/index.js';
+export type { AnimationConfig, EasingFunction } from './animations/index.js';

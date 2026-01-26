@@ -50,7 +50,6 @@ export class NodeRenderPass implements RenderPass {
   private instanceCount: number = 0;
 
   // Config
-  private _margins: Margins;
   private pixelRatio: number;
   private dimOpacity: number;
   private hoverBrighten: number;
@@ -64,17 +63,16 @@ export class NodeRenderPass implements RenderPass {
   constructor(config: NodeRenderPassConfig) {
     this.gl = config.gl;
     this.getShaderProgram = config.getShaderProgram;
-    this._margins = config.margins;
     this.pixelRatio = config.pixelRatio;
     this.dimOpacity = config.dimOpacity ?? 0.15;
     this.hoverBrighten = config.hoverBrighten ?? 1.2;
   }
 
   /**
-   * Set margins
+   * Set margins (currently unused for network nodes)
    */
-  setMargins(margins: Margins): void {
-    this._margins = margins;
+  setMargins(_margins: Margins): void {
+    // Network nodes don't use margins - they render in the full viewport
   }
 
   /**
