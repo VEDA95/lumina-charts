@@ -110,10 +110,7 @@ export type {
 export { DataProcessor } from './data/DataProcessor.js';
 export { SpatialIndex } from './data/SpatialIndex.js';
 export { LODManager, douglasPeuckerDecimate, gridBasedDecimate } from './data/LODManager.js';
-export type {
-  ProcessPointOptions,
-  ProcessLineOptions,
-} from './data/DataProcessor.js';
+export type { ProcessPointOptions, ProcessLineOptions } from './data/DataProcessor.js';
 export type { IndexedPoint, SpatialHitResult, BoundingBox } from './data/SpatialIndex.js';
 export type { LODLevel, LODConfig } from './data/LODManager.js';
 
@@ -124,12 +121,32 @@ export { BufferPool, createAttributeLayout, calculateStride } from './renderer/B
 
 // Shaders
 export { POINT_SHADER, POINT_WITH_STROKE_SHADER, INSTANCED_POINT_SHADER } from './shaders/point.js';
-export { LINE_SHADER, SIMPLE_LINE_SHADER, DASHED_LINE_SHADER, AREA_SHADER, GRADIENT_AREA_SHADER } from './shaders/line.js';
-export { GRID_SHADER, DASHED_GRID_SHADER, CROSSHAIR_SHADER, SELECTION_SHADER, ZOOM_LENS_SHADER } from './shaders/grid.js';
+export {
+  LINE_SHADER,
+  SIMPLE_LINE_SHADER,
+  DASHED_LINE_SHADER,
+  AREA_SHADER,
+  GRADIENT_AREA_SHADER,
+} from './shaders/line.js';
+export {
+  GRID_SHADER,
+  DASHED_GRID_SHADER,
+  CROSSHAIR_SHADER,
+  SELECTION_SHADER,
+  ZOOM_LENS_SHADER,
+} from './shaders/grid.js';
 export { BAR_SHADER, BAR_WITH_BORDER_SHADER, BAR_ROUNDED_SHADER } from './shaders/bar.js';
 export { PIE_SHADER, PIE_WITH_BORDER_SHADER } from './shaders/pie.js';
-export { CANDLESTICK_BODY_SHADER, CANDLESTICK_WICK_SHADER, CANDLESTICK_BODY_BORDER_SHADER } from './shaders/candlestick.js';
-export { BOXPLOT_BOX_SHADER, BOXPLOT_LINE_SHADER, BOXPLOT_OUTLIER_SHADER } from './shaders/boxplot.js';
+export {
+  CANDLESTICK_BODY_SHADER,
+  CANDLESTICK_WICK_SHADER,
+  CANDLESTICK_BODY_BORDER_SHADER,
+} from './shaders/candlestick.js';
+export {
+  BOXPLOT_BOX_SHADER,
+  BOXPLOT_LINE_SHADER,
+  BOXPLOT_OUTLIER_SHADER,
+} from './shaders/boxplot.js';
 export { HEATMAP_CELL_SHADER } from './shaders/heatmap.js';
 export { NETWORK_NODE_SHADER, NETWORK_EDGE_SHADER } from './shaders/network.js';
 export { buildVertexShader, buildFragmentShader } from './shaders/common.js';
@@ -253,7 +270,13 @@ export type {
 } from './types/index.js';
 
 export { DEFAULT_THEME_STYLES } from './types/index.js';
-export { SEQUENTIAL_BLUE, SEQUENTIAL_GREEN, DIVERGING_RWB, VIRIDIS, PLASMA } from './types/index.js';
+export {
+  SEQUENTIAL_BLUE,
+  SEQUENTIAL_GREEN,
+  DIVERGING_RWB,
+  VIRIDIS,
+  PLASMA,
+} from './types/index.js';
 export { DEFAULT_GROUP_COLORS } from './types/index.js';
 
 // Utils

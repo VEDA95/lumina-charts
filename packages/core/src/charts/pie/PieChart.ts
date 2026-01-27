@@ -181,7 +181,10 @@ export class PieChart extends BaseChart {
           this.selectedSliceIndex = slice.index;
         }
 
-        this.pieRenderPass.setSelectedSlice(this.selectedSliceIndex, this.pieOptions.explodeOffset ?? 0);
+        this.pieRenderPass.setSelectedSlice(
+          this.selectedSliceIndex,
+          this.pieOptions.explodeOffset ?? 0
+        );
         this.render();
 
         // Emit selection event
@@ -403,7 +406,7 @@ export class PieChart extends BaseChart {
     const total = validData.reduce((sum, d) => sum + d.y, 0);
 
     // Sort if configured
-    let sortedData = [...validData];
+    const sortedData = [...validData];
     if (this.pieOptions.sortSlices === 'ascending') {
       sortedData.sort((a, b) => a.y - b.y);
     } else if (this.pieOptions.sortSlices === 'descending') {
@@ -696,10 +699,7 @@ export class PieChart extends BaseChart {
       }
 
       // Escape text for SVG
-      const escapedText = text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+      const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       svgContent += `<text x="${cssX}" y="${cssY}" text-anchor="${textAnchor}" dominant-baseline="middle" font-family="system-ui, sans-serif" font-size="${fontSize}" fill="${fontColor}">${escapedText}</text>\n`;
     }

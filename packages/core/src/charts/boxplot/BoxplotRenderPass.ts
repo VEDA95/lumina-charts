@@ -10,7 +10,11 @@ import type {
   Margins,
 } from '../../types/index.js';
 import type { Boxplot, BoxplotOrientation } from '../../types/boxplot.js';
-import { BOXPLOT_BOX_SHADER, BOXPLOT_LINE_SHADER, BOXPLOT_OUTLIER_SHADER } from '../../shaders/boxplot.js';
+import {
+  BOXPLOT_BOX_SHADER,
+  BOXPLOT_LINE_SHADER,
+  BOXPLOT_OUTLIER_SHADER,
+} from '../../shaders/boxplot.js';
 
 /**
  * Configuration for the boxplot render pass
@@ -457,14 +461,28 @@ export class BoxplotRenderPass implements RenderPass {
     const colorLoc = shader.attributes.get('a_color');
     if (colorLoc !== undefined) {
       gl.enableVertexAttribArray(colorLoc);
-      gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        colorLoc,
+        4,
+        gl.FLOAT,
+        false,
+        stride,
+        2 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     // a_hovered (float)
     const hoveredLoc = shader.attributes.get('a_hovered');
     if (hoveredLoc !== undefined) {
       gl.enableVertexAttribArray(hoveredLoc);
-      gl.vertexAttribPointer(hoveredLoc, 1, gl.FLOAT, false, stride, 6 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        hoveredLoc,
+        1,
+        gl.FLOAT,
+        false,
+        stride,
+        6 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
   }
 
@@ -472,8 +490,11 @@ export class BoxplotRenderPass implements RenderPass {
    * Render the boxplots
    */
   render(ctx: RenderContext, _state: ChartState): void {
-    const hasData = this.boxVertexCount > 0 || this.whiskerVertexCount > 0 ||
-                    this.medianVertexCount > 0 || this.outlierVertexCount > 0;
+    const hasData =
+      this.boxVertexCount > 0 ||
+      this.whiskerVertexCount > 0 ||
+      this.medianVertexCount > 0 ||
+      this.outlierVertexCount > 0;
     if (!hasData) return;
 
     this.ensureInitialized();

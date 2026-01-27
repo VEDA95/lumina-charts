@@ -2,11 +2,7 @@
  * Network chart implementation for node-link graph visualization
  */
 
-import type {
-  RenderPass,
-  RGBAColor,
-  DataDomain,
-} from '../../types/index.js';
+import type { RenderPass, RGBAColor, DataDomain } from '../../types/index.js';
 import type {
   NetworkChartOptions,
   NetworkChartConfig,
@@ -236,10 +232,10 @@ export class NetworkChart extends BaseChart {
         node.selected = !node.selected;
 
         // Emit selection event (network-specific format)
-        const selectedNodes = this.processedNodes.filter(n => n.selected);
+        const selectedNodes = this.processedNodes.filter((n) => n.selected);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (this.emit as any)('selectionChange', {
-          selected: new Set(selectedNodes.map(n => n.id)),
+          selected: new Set(selectedNodes.map((n) => n.id)),
           nodes: selectedNodes,
           added: node.selected ? [node.id] : [],
           removed: node.selected ? [] : [node.id],
@@ -296,7 +292,7 @@ export class NetworkChart extends BaseChart {
    */
   private getConnectedNodes(nodeId: string): ProcessedNode[] {
     const connectedIds = this.adjacencyMap.get(nodeId) ?? new Set();
-    return this.processedNodes.filter(n => connectedIds.has(n.id));
+    return this.processedNodes.filter((n) => connectedIds.has(n.id));
   }
 
   /**
@@ -313,13 +309,17 @@ export class NetworkChart extends BaseChart {
 
     const content = `
       <div style="font-weight: 500; margin-bottom: 8px;">${label}</div>
-      ${group !== null ? `
+      ${
+        group !== null
+          ? `
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
         <span style="width: 3px; height: 16px; border-radius: 1px; background: ${colorStr}; flex-shrink: 0;"></span>
         <span style="opacity: 0.7;">Group</span>
         <span style="margin-left: auto;">${group}</span>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
       <div style="display: flex; align-items: center; gap: 8px;">
         <span style="width: 3px; height: 16px; border-radius: 1px; background: transparent; flex-shrink: 0;"></span>
         <span style="opacity: 0.7;">Connections</span>
@@ -466,7 +466,8 @@ export class NetworkChart extends BaseChart {
   private updateLabels(): void {
     if (!this.labelContainer) return;
 
-    const threshold = (this.networkOptions.labelThreshold ?? DEFAULT_OPTIONS.labelThreshold) * this.pixelRatio;
+    const threshold =
+      (this.networkOptions.labelThreshold ?? DEFAULT_OPTIONS.labelThreshold) * this.pixelRatio;
     const fontSize = this.networkOptions.labelFontSize ?? DEFAULT_OPTIONS.labelFontSize;
     const labelColor = this.networkOptions.labelColor ?? [0.2, 0.2, 0.2, 1];
     const [r, g, b, a] = labelColor;
@@ -552,7 +553,8 @@ export class NetworkChart extends BaseChart {
     this.processData();
 
     // Determine if we should animate
-    const shouldAnimate = (options?.animate ?? this.networkOptions.animate ?? false) && hadPreviousData;
+    const shouldAnimate =
+      (options?.animate ?? this.networkOptions.animate ?? false) && hadPreviousData;
 
     if (shouldAnimate) {
       // Animate from old positions to new positions
@@ -596,7 +598,8 @@ export class NetworkChart extends BaseChart {
   private updateLabelsWithNodes(nodes: ProcessedNode[]): void {
     if (!this.labelContainer) return;
 
-    const threshold = (this.networkOptions.labelThreshold ?? DEFAULT_OPTIONS.labelThreshold) * this.pixelRatio;
+    const threshold =
+      (this.networkOptions.labelThreshold ?? DEFAULT_OPTIONS.labelThreshold) * this.pixelRatio;
     const fontSize = this.networkOptions.labelFontSize ?? DEFAULT_OPTIONS.labelFontSize;
     const labelColor = this.networkOptions.labelColor ?? [0.2, 0.2, 0.2, 1];
     const [r, g, b, a] = labelColor;
@@ -711,14 +714,15 @@ export class NetworkChart extends BaseChart {
     );
 
     // Calculate size scale
-    const sizes = this.networkData.nodes.map(n => n.size ?? 1);
+    const sizes = this.networkData.nodes.map((n) => n.size ?? 1);
     const minSize = Math.min(...sizes);
     const maxSize = Math.max(...sizes);
-    const [minRadius, maxRadius] = this.networkOptions.nodeSizeRange ?? DEFAULT_OPTIONS.nodeSizeRange;
+    const [minRadius, maxRadius] =
+      this.networkOptions.nodeSizeRange ?? DEFAULT_OPTIONS.nodeSizeRange;
 
     // Process nodes
     const nodeMap = new Map<string, ProcessedNode>();
-    this.processedNodes = this.networkData.nodes.map(node => {
+    this.processedNodes = this.networkData.nodes.map((node) => {
       const pos = positions.get(node.id) ?? { x: plotWidth / 2, y: plotHeight / 2 };
       const size = node.size ?? 1;
       const normalizedSize = maxSize > minSize ? (size - minSize) / (maxSize - minSize) : 0.5;
@@ -746,54 +750,58 @@ export class NetworkChart extends BaseChart {
 
     // Process edges
     const edgeOpacity = this.networkOptions.edgeOpacity ?? DEFAULT_OPTIONS.edgeOpacity;
-    const weights = this.networkData.edges.map(e => e.weight ?? 1);
+    const weights = this.networkData.edges.map((e) => e.weight ?? 1);
     const minWeight = Math.min(...weights);
     const maxWeight = Math.max(...weights);
-    const [minWidth, maxWidth] = this.networkOptions.edgeWidthRange ?? DEFAULT_OPTIONS.edgeWidthRange;
+    const [minWidth, maxWidth] =
+      this.networkOptions.edgeWidthRange ?? DEFAULT_OPTIONS.edgeWidthRange;
     const curveOffset = this.networkOptions.edgeCurve ?? DEFAULT_OPTIONS.edgeCurve;
 
-    this.processedEdges = this.networkData.edges.map(edge => {
-      const sourceNode = nodeMap.get(edge.source);
-      const targetNode = nodeMap.get(edge.target);
+    this.processedEdges = this.networkData.edges
+      .map((edge) => {
+        const sourceNode = nodeMap.get(edge.source);
+        const targetNode = nodeMap.get(edge.target);
 
-      if (!sourceNode || !targetNode) {
-        return null;
-      }
+        if (!sourceNode || !targetNode) {
+          return null;
+        }
 
-      const weight = edge.weight ?? 1;
-      const normalizedWeight = maxWeight > minWeight ? (weight - minWeight) / (maxWeight - minWeight) : 0.5;
-      const edgeWidth = (minWidth + normalizedWeight * (maxWidth - minWidth)) * this.pixelRatio;
+        const weight = edge.weight ?? 1;
+        const normalizedWeight =
+          maxWeight > minWeight ? (weight - minWeight) / (maxWeight - minWeight) : 0.5;
+        const edgeWidth = (minWidth + normalizedWeight * (maxWidth - minWidth)) * this.pixelRatio;
 
-      // Calculate bezier control point
-      const midX = (sourceNode.pixelX + targetNode.pixelX) / 2;
-      const midY = (sourceNode.pixelY + targetNode.pixelY) / 2;
-      const dx = targetNode.pixelX - sourceNode.pixelX;
-      const dy = targetNode.pixelY - sourceNode.pixelY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+        // Calculate bezier control point
+        const midX = (sourceNode.pixelX + targetNode.pixelX) / 2;
+        const midY = (sourceNode.pixelY + targetNode.pixelY) / 2;
+        const dx = targetNode.pixelX - sourceNode.pixelX;
+        const dy = targetNode.pixelY - sourceNode.pixelY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
 
-      // Perpendicular offset for curve
-      const perpX = -dy / (dist || 1) * dist * curveOffset;
-      const perpY = dx / (dist || 1) * dist * curveOffset;
+        // Perpendicular offset for curve
+        const perpX = (-dy / (dist || 1)) * dist * curveOffset;
+        const perpY = (dx / (dist || 1)) * dist * curveOffset;
 
-      // Edge color matches source node with reduced opacity
-      const sourceColor = sourceNode.color;
-      const edgeColor: RGBAColor = [sourceColor[0], sourceColor[1], sourceColor[2], edgeOpacity];
+        // Edge color matches source node with reduced opacity
+        const sourceColor = sourceNode.color;
+        const edgeColor: RGBAColor = [sourceColor[0], sourceColor[1], sourceColor[2], edgeOpacity];
 
-      return {
-        sourceId: edge.source,
-        targetId: edge.target,
-        sourceX: sourceNode.pixelX,
-        sourceY: sourceNode.pixelY,
-        targetX: targetNode.pixelX,
-        targetY: targetNode.pixelY,
-        controlX: midX + perpX,
-        controlY: midY + perpY,
-        color: edgeColor,
-        width: edgeWidth,
-        weight,
-        highlighted: false,
-      } as ProcessedEdge;
-    }).filter((e): e is ProcessedEdge => e !== null);
+        return {
+          sourceId: edge.source,
+          targetId: edge.target,
+          sourceX: sourceNode.pixelX,
+          sourceY: sourceNode.pixelY,
+          targetX: targetNode.pixelX,
+          targetY: targetNode.pixelY,
+          controlX: midX + perpX,
+          controlY: midY + perpY,
+          color: edgeColor,
+          width: edgeWidth,
+          weight,
+          highlighted: false,
+        } as ProcessedEdge;
+      })
+      .filter((e): e is ProcessedEdge => e !== null);
 
     // Update render passes
     this.updateRenderData();
@@ -959,14 +967,14 @@ export class NetworkChart extends BaseChart {
 
     // Transform node positions
     for (const node of this.processedNodes) {
-      node.pixelX = plotLeft + (node.x - domain.x[0]) / domainWidth * plotWidth;
-      node.pixelY = plotTop + (node.y - flippedDomainY0) / domainHeight * plotHeight;
+      node.pixelX = plotLeft + ((node.x - domain.x[0]) / domainWidth) * plotWidth;
+      node.pixelY = plotTop + ((node.y - flippedDomainY0) / domainHeight) * plotHeight;
     }
 
     // Transform edge positions
     for (const edge of this.processedEdges) {
-      const sourceNode = this.processedNodes.find(n => n.id === edge.sourceId);
-      const targetNode = this.processedNodes.find(n => n.id === edge.targetId);
+      const sourceNode = this.processedNodes.find((n) => n.id === edge.sourceId);
+      const targetNode = this.processedNodes.find((n) => n.id === edge.targetId);
 
       if (sourceNode && targetNode) {
         edge.sourceX = sourceNode.pixelX;

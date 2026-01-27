@@ -2,9 +2,21 @@
  * Histogram chart exports
  */
 
-export { HistogramChart, type HistogramChartConfig, type HistogramChartOptions } from './HistogramChart.js';
-export { HistogramRenderPass, type HistogramRenderPassConfig, type HistogramBarData } from './HistogramRenderPass.js';
-export { HistogramLinePass, type HistogramLinePassConfig, type OverlayCurve } from './HistogramLinePass.js';
+export {
+  HistogramChart,
+  type HistogramChartConfig,
+  type HistogramChartOptions,
+} from './HistogramChart.js';
+export {
+  HistogramRenderPass,
+  type HistogramRenderPassConfig,
+  type HistogramBarData,
+} from './HistogramRenderPass.js';
+export {
+  HistogramLinePass,
+  type HistogramLinePassConfig,
+  type OverlayCurve,
+} from './HistogramLinePass.js';
 export {
   binData,
   sturgesBinCount,

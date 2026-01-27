@@ -93,7 +93,7 @@ export class EdgeRenderPass implements RenderPass {
    */
   updateData(edges: ProcessedEdge[]): void {
     this.edges = edges;
-    this.hasHighlighted = edges.some(e => e.highlighted);
+    this.hasHighlighted = edges.some((e) => e.highlighted);
     this.uploadEdgeData();
   }
 
@@ -164,9 +164,12 @@ export class EdgeRenderPass implements RenderPass {
    * Tessellate a quadratic bezier curve into triangles
    */
   private tessellateBezier(
-    x0: number, y0: number,
-    cx: number, cy: number,
-    x1: number, y1: number,
+    x0: number,
+    y0: number,
+    cx: number,
+    cy: number,
+    x1: number,
+    y1: number,
     width: number,
     color: readonly [number, number, number, number],
     highlighted: boolean
@@ -220,9 +223,12 @@ export class EdgeRenderPass implements RenderPass {
 
     for (const edge of this.edges) {
       const edgeVertices = this.tessellateBezier(
-        edge.sourceX, edge.sourceY,
-        edge.controlX, edge.controlY,
-        edge.targetX, edge.targetY,
+        edge.sourceX,
+        edge.sourceY,
+        edge.controlX,
+        edge.controlY,
+        edge.targetX,
+        edge.targetY,
         edge.width,
         edge.color,
         edge.highlighted ?? false

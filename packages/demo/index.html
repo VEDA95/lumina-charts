@@ -12,20 +12,35 @@
   <body class="bg-gray-100 p-5 font-sans transition-colors duration-200 dark:bg-zinc-950">
     <div class="mb-4 flex items-center justify-between">
       <h1 class="text-2xl font-bold text-gray-800 dark:text-zinc-50">Lumina Charts - Demo</h1>
-      <div class="flex items-center gap-3">
-        <span class="text-sm text-gray-600 dark:text-zinc-400">Theme</span>
-        <button
-          id="theme-toggle"
-          class="relative h-7 w-14 cursor-pointer rounded-full transition-colors duration-200"
-          aria-label="Toggle theme"
-        >
-          <span
-            id="theme-toggle-thumb"
-            class="absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200"
-          ></span>
-          <span class="sr-only">Toggle dark mode</span>
-        </button>
-        <span class="text-xs text-gray-500 dark:text-zinc-500" id="theme-label">Light</span>
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-600 dark:text-zinc-400">Chart Theme</span>
+          <select
+            id="chart-theme-select"
+            class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200"
+          >
+            <option value="shadcn">Shadcn (Default)</option>
+            <option value="classicLight">Classic Light</option>
+            <option value="classicDark">Classic Dark</option>
+            <option value="vibrant">Vibrant</option>
+            <option value="highContrast">High Contrast</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-sm text-gray-600 dark:text-zinc-400">Dark Mode</span>
+          <button
+            id="theme-toggle"
+            class="relative h-7 w-14 cursor-pointer rounded-full transition-colors duration-200"
+            aria-label="Toggle theme"
+          >
+            <span
+              id="theme-toggle-thumb"
+              class="absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200"
+            ></span>
+            <span class="sr-only">Toggle dark mode</span>
+          </button>
+          <span class="text-xs text-gray-500 dark:text-zinc-500" id="theme-label">Light</span>
+        </div>
       </div>
     </div>
 

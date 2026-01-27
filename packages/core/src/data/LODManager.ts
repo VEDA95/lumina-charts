@@ -106,7 +106,9 @@ export class LODManager {
 
     // Log generated levels
     if (levels.length > 1) {
-      console.log(`LOD generated for "${seriesId}": ${levels.map((l) => `L${l.level}:${l.pointCount}`).join(', ')}`);
+      console.log(
+        `LOD generated for "${seriesId}": ${levels.map((l) => `L${l.level}:${l.pointCount}`).join(', ')}`
+      );
     }
 
     return levels;
@@ -309,7 +311,12 @@ export class LODManager {
     viewportWidth: number,
     visibleXRange: [number, number],
     fullXRange: [number, number]
-  ): { level: number; estimatedVisiblePoints: number; maxVisiblePoints: number; visibleRatio: number } | null {
+  ): {
+    level: number;
+    estimatedVisiblePoints: number;
+    maxVisiblePoints: number;
+    visibleRatio: number;
+  } | null {
     const levels = this.levels.get(seriesId);
     if (!levels || levels.length === 0) return null;
 

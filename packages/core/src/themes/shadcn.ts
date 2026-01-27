@@ -9,10 +9,10 @@ import type { RGBAColor, Theme, ThemeColors, ThemeStyleConfig } from '../types/i
  * shadcn-style color palette (RGBA for WebGL, values 0-1)
  */
 export const SHADCN_COLORS_RGBA: RGBAColor[] = [
-  [0.376, 0.647, 0.980, 1.0], // #60a5fa - primary blue
-  [0.231, 0.510, 0.965, 1.0], // #3b82f6 - secondary blue
+  [0.376, 0.647, 0.98, 1.0], // #60a5fa - primary blue
+  [0.231, 0.51, 0.965, 1.0], // #3b82f6 - secondary blue
   [0.506, 0.549, 0.973, 1.0], // #818cf8 - indigo
-  [0.655, 0.545, 0.980, 1.0], // #a78bfa - violet
+  [0.655, 0.545, 0.98, 1.0], // #a78bfa - violet
   [0.753, 0.518, 0.957, 1.0], // #c084fc - purple
   [0.882, 0.529, 0.718, 1.0], // #e18bb7 - pink
   [0.965, 0.576, 0.576, 1.0], // #f69393 - rose

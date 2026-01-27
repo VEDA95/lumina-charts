@@ -147,23 +147,23 @@ export interface HeatmapVertexData {
  * Default color scales
  */
 export const SEQUENTIAL_BLUE: RGBAColor[] = [
-  [0.97, 0.97, 1.0, 1.0],  // Light blue
-  [0.2, 0.4, 0.8, 1.0],    // Dark blue
+  [0.97, 0.97, 1.0, 1.0], // Light blue
+  [0.2, 0.4, 0.8, 1.0], // Dark blue
 ];
 
 export const SEQUENTIAL_GREEN: RGBAColor[] = [
-  [0.9, 1.0, 0.9, 1.0],    // Light green
-  [0.1, 0.6, 0.2, 1.0],    // Dark green
+  [0.9, 1.0, 0.9, 1.0], // Light green
+  [0.1, 0.6, 0.2, 1.0], // Dark green
 ];
 
 export const DIVERGING_RWB: RGBAColor[] = [
-  [0.2, 0.4, 0.8, 1.0],    // Blue (low)
-  [1.0, 1.0, 1.0, 1.0],    // White (mid)
-  [0.8, 0.2, 0.2, 1.0],    // Red (high)
+  [0.2, 0.4, 0.8, 1.0], // Blue (low)
+  [1.0, 1.0, 1.0, 1.0], // White (mid)
+  [0.8, 0.2, 0.2, 1.0], // Red (high)
 ];
 
 export const VIRIDIS: RGBAColor[] = [
-  [0.27, 0.00, 0.33, 1.0],
+  [0.27, 0.0, 0.33, 1.0],
   [0.28, 0.47, 0.81, 1.0],
   [0.13, 0.72, 0.55, 1.0],
   [0.99, 0.91, 0.14, 1.0],
@@ -171,7 +171,7 @@ export const VIRIDIS: RGBAColor[] = [
 
 export const PLASMA: RGBAColor[] = [
   [0.05, 0.03, 0.53, 1.0],
-  [0.80, 0.15, 0.47, 1.0],
-  [0.98, 0.60, 0.21, 1.0],
+  [0.8, 0.15, 0.47, 1.0],
+  [0.98, 0.6, 0.21, 1.0],
   [0.94, 0.98, 0.13, 1.0],
 ];

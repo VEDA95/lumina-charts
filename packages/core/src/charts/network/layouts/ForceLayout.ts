@@ -81,11 +81,7 @@ export class ForceLayout {
   /**
    * Initialize node positions
    */
-  private initializeNodes(
-    nodes: NetworkNode[],
-    width: number,
-    height: number
-  ): SimNode[] {
+  private initializeNodes(nodes: NetworkNode[], width: number, height: number): SimNode[] {
     const padding = Math.min(width, height) * 0.1;
     const simNodes: SimNode[] = [];
 
@@ -180,11 +176,11 @@ export class ForceLayout {
 
     // Attraction along edges
     for (const [sourceId, targets] of adjacency) {
-      const sourceNode = nodes.find(n => n.id === sourceId);
+      const sourceNode = nodes.find((n) => n.id === sourceId);
       if (!sourceNode) continue;
 
       for (const targetId of targets) {
-        const targetNode = nodes.find(n => n.id === targetId);
+        const targetNode = nodes.find((n) => n.id === targetId);
         if (!targetNode) continue;
 
         // Only process each edge once

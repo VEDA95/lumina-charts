@@ -209,7 +209,10 @@ export class SpatialIndex {
   /**
    * Find all points within a polygon (lasso selection)
    */
-  findInPolygon(polygon: Array<{ x: number; y: number }>, visibleSeries?: Set<string>): IndexedPoint[] {
+  findInPolygon(
+    polygon: Array<{ x: number; y: number }>,
+    visibleSeries?: Set<string>
+  ): IndexedPoint[] {
     // First get bounding box candidates
     const bbox = this.calculatePolygonBBox(polygon);
     const candidates = this.tree.search(bbox);
@@ -293,7 +296,10 @@ export class SpatialIndex {
   /**
    * Ray casting algorithm to check if point is inside polygon
    */
-  private pointInPolygon(point: { x: number; y: number }, polygon: Array<{ x: number; y: number }>): boolean {
+  private pointInPolygon(
+    point: { x: number; y: number },
+    polygon: Array<{ x: number; y: number }>
+  ): boolean {
     let inside = false;
     const n = polygon.length;
 
@@ -303,7 +309,10 @@ export class SpatialIndex {
       const xj = polygon[j].x;
       const yj = polygon[j].y;
 
-      if (yi > point.y !== yj > point.y && point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi) {
+      if (
+        yi > point.y !== yj > point.y &&
+        point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi
+      ) {
         inside = !inside;
       }
     }

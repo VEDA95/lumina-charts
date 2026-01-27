@@ -5,7 +5,15 @@
 import { axisBottom, axisLeft, type Axis } from 'd3-axis';
 import { select, type Selection } from 'd3-selection';
 import type { Margins, DataDomain, AxisConfig, ScaleType } from '../types/index.js';
-import { ScaleFactory, LinearScale, LogScale, PowScale, SymlogScale, TimeScale, BandScale } from '../scales/index.js';
+import {
+  ScaleFactory,
+  LinearScale,
+  LogScale,
+  PowScale,
+  SymlogScale,
+  TimeScale,
+  BandScale,
+} from '../scales/index.js';
 import type { Scale } from '../types/scale.js';
 
 /**
@@ -348,7 +356,7 @@ export class AxisRenderer {
     min: number,
     max: number
   ): void {
-    axisGroup.selectAll('.tick').each(function() {
+    axisGroup.selectAll('.tick').each(function () {
       const tick = select(this);
       const transform = tick.attr('transform');
       if (!transform) return;
@@ -357,9 +365,7 @@ export class AxisRenderer {
       const match = transform.match(/translate\(([^,)]+)(?:,([^)]+))?\)/);
       if (!match) return;
 
-      const position = axis === 'x'
-        ? parseFloat(match[1])
-        : parseFloat(match[2] || match[1]);
+      const position = axis === 'x' ? parseFloat(match[1]) : parseFloat(match[2] || match[1]);
 
       // Hide tick if outside bounds (with small tolerance for edge cases)
       const tolerance = 1;
@@ -389,10 +395,7 @@ export class AxisRenderer {
         .style('stroke', 'var(--lumina-axis-line-color, #ccc)')
         .style('display', 'block');
     } else {
-      axisGroup
-        .selectAll('path.domain')
-        .style('stroke', 'none')
-        .style('display', 'none');
+      axisGroup.selectAll('path.domain').style('stroke', 'none').style('display', 'none');
     }
 
     // Style or hide tick lines
@@ -402,10 +405,7 @@ export class AxisRenderer {
         .style('stroke', 'var(--lumina-axis-line-color, #ccc)')
         .style('display', 'block');
     } else {
-      axisGroup
-        .selectAll('.tick line')
-        .style('stroke', 'none')
-        .style('display', 'none');
+      axisGroup.selectAll('.tick line').style('stroke', 'none').style('display', 'none');
     }
 
     // Style tick labels - use CSS variable for dark mode support
@@ -414,7 +414,10 @@ export class AxisRenderer {
       .selectAll('text')
       .style('fill', 'var(--lumina-axis-text-color)')
       .style('font-size', isMinimal ? '12px' : '11px')
-      .style('font-family', 'var(--lumina-font-family, Inter, system-ui, -apple-system, sans-serif)');
+      .style(
+        'font-family',
+        'var(--lumina-font-family, Inter, system-ui, -apple-system, sans-serif)'
+      );
   }
 
   /**
@@ -476,7 +479,10 @@ export class AxisRenderer {
   /**
    * Convert pixel coordinates to data coordinates
    */
-  pixelToData(pixelX: number, pixelY: number): { x: number | string | Date; y: number | string | Date } {
+  pixelToData(
+    pixelX: number,
+    pixelY: number
+  ): { x: number | string | Date; y: number | string | Date } {
     return {
       x: this.pixelToDataX(pixelX),
       y: this.pixelToDataY(pixelY),
@@ -486,7 +492,10 @@ export class AxisRenderer {
   /**
    * Convert data coordinates to pixel coordinates
    */
-  dataToPixel(dataX: number | string | Date, dataY: number | string | Date): { x: number; y: number } {
+  dataToPixel(
+    dataX: number | string | Date,
+    dataY: number | string | Date
+  ): { x: number; y: number } {
     return {
       x: this.dataToPixelX(dataX),
       y: this.dataToPixelY(dataY),
@@ -532,8 +541,10 @@ export class AxisRenderer {
    * Update axis configuration
    */
   updateConfig(xAxis?: AxisConfig, yAxis?: AxisConfig): void {
-    const xScaleTypeChanged = xAxis && (xAxis.type !== this.xAxisConfig.type || xAxis.scale !== this.xAxisConfig.scale);
-    const yScaleTypeChanged = yAxis && (yAxis.type !== this.yAxisConfig.type || yAxis.scale !== this.yAxisConfig.scale);
+    const xScaleTypeChanged =
+      xAxis && (xAxis.type !== this.xAxisConfig.type || xAxis.scale !== this.xAxisConfig.scale);
+    const yScaleTypeChanged =
+      yAxis && (yAxis.type !== this.yAxisConfig.type || yAxis.scale !== this.yAxisConfig.scale);
 
     if (xAxis) {
       this.xAxisConfig = xAxis;

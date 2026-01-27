@@ -2,12 +2,7 @@
  * Candlestick chart implementation for OHLC financial data
  */
 
-import type {
-  RenderPass,
-  Series,
-  RGBAColor,
-  DataDomain,
-} from '../../types/index.js';
+import type { RenderPass, Series, RGBAColor, DataDomain } from '../../types/index.js';
 import type {
   CandlestickChartOptions,
   CandlestickChartConfig,
@@ -59,7 +54,9 @@ export class CandlestickChart extends BaseChart {
 
     // Get render passes
     this.gridRenderPass = this.renderer.getRenderPass('grid') as GridRenderPass | null;
-    this.candlestickRenderPass = this.renderer.getRenderPass('candlestick') as CandlestickRenderPass;
+    this.candlestickRenderPass = this.renderer.getRenderPass(
+      'candlestick'
+    ) as CandlestickRenderPass;
 
     // Initialize axis renderer
     this.initializeAxisRenderer();
@@ -226,7 +223,7 @@ export class CandlestickChart extends BaseChart {
         <span style="font-family: 'Geist Mono', monospace; color: ${indicatorColor};">${formatPrice(candle.close)}</span>
       </div>
       <div style="padding-top: 4px; border-top: 1px solid currentColor; opacity: 0.3;">
-        <span style="opacity: 1;">${candle.bullish ? '▲' : '▼'} <span style="font-family: 'Geist Mono', monospace;">${((candle.close - candle.open) / candle.open * 100).toFixed(2)}%</span></span>
+        <span style="opacity: 1;">${candle.bullish ? '▲' : '▼'} <span style="font-family: 'Geist Mono', monospace;">${(((candle.close - candle.open) / candle.open) * 100).toFixed(2)}%</span></span>
       </div>
     `;
 
@@ -331,7 +328,14 @@ export class CandlestickChart extends BaseChart {
    * Extract OHLC data from a data point
    */
   private extractOHLC(point: unknown): OHLCDataPoint | null {
-    const p = point as { x?: number; y?: number; open?: number; high?: number; low?: number; close?: number };
+    const p = point as {
+      x?: number;
+      y?: number;
+      open?: number;
+      high?: number;
+      low?: number;
+      close?: number;
+    };
 
     if (
       typeof p.x !== 'number' ||
@@ -673,8 +677,10 @@ export class CandlestickChart extends BaseChart {
     const coords = this.axisRenderer.pixelToData(cssX, cssY);
     // Coerce values to numbers for candlestick charts
     return {
-      x: typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
-      y: typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
+      x:
+        typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
+      y:
+        typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
     };
   }
 

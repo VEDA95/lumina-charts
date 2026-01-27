@@ -233,12 +233,7 @@ export class HeatmapRenderPass implements RenderPass {
 
     // Enable scissor test to clip to plot area
     gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(
-      plotLeft,
-      height - plotTop - plotHeight,
-      plotWidth,
-      plotHeight
-    );
+    gl.scissor(plotLeft, height - plotTop - plotHeight, plotWidth, plotHeight);
 
     // Draw cells
     gl.drawArrays(gl.TRIANGLES, 0, this.vertexCount);

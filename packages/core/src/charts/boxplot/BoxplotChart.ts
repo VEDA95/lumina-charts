@@ -2,12 +2,7 @@
  * Boxplot chart implementation for statistical distribution data
  */
 
-import type {
-  RenderPass,
-  Series,
-  RGBAColor,
-  DataDomain,
-} from '../../types/index.js';
+import type { RenderPass, Series, RGBAColor, DataDomain } from '../../types/index.js';
 import type {
   BoxplotChartOptions,
   BoxplotChartConfig,
@@ -89,9 +84,10 @@ export class BoxplotChart extends BaseChart {
     if (orientation === 'vertical') {
       // X axis is categories for vertical charts
       // Generate explicit tick values at integer positions to avoid duplicate labels
-      const tickValues = this.categories.length > 0
-        ? Array.from({ length: this.categories.length }, (_, i) => i)
-        : undefined;
+      const tickValues =
+        this.categories.length > 0
+          ? Array.from({ length: this.categories.length }, (_, i) => i)
+          : undefined;
 
       return {
         ...baseConfig,
@@ -143,9 +139,10 @@ export class BoxplotChart extends BaseChart {
     } else {
       // Y axis is categories for horizontal charts
       // Generate explicit tick values at integer positions to avoid duplicate labels
-      const tickValues = this.categories.length > 0
-        ? Array.from({ length: this.categories.length }, (_, i) => i)
-        : undefined;
+      const tickValues =
+        this.categories.length > 0
+          ? Array.from({ length: this.categories.length }, (_, i) => i)
+          : undefined;
 
       return {
         ...baseConfig,
@@ -254,11 +251,15 @@ export class BoxplotChart extends BaseChart {
         <span style="opacity: 0.7;">Min</span>
         <span style="font-family: 'Geist Mono', monospace;">${formatValue(box.min)}</span>
       </div>
-      ${box.outliers.length > 0 ? `
+      ${
+        box.outliers.length > 0
+          ? `
       <div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid currentColor; opacity: 0.3;">
         <span style="opacity: 1; color: #fb923c;">Outliers: <span style="font-family: 'Geist Mono', monospace;">${box.outliers.length}</span> point${box.outliers.length > 1 ? 's' : ''}</span>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
     `;
 
     tooltip.className = 'lumina-tooltip';
@@ -751,8 +752,10 @@ export class BoxplotChart extends BaseChart {
     const coords = this.axisRenderer.pixelToData(cssX, cssY);
     // Coerce values to numbers for boxplot charts
     return {
-      x: typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
-      y: typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
+      x:
+        typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
+      y:
+        typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
     };
   }
 

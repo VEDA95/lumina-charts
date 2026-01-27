@@ -12,7 +12,10 @@ export function hexToRGBA(hex: string, alpha: number = 1): RGBAColor {
   // Remove # if present
   const cleaned = hex.startsWith('#') ? hex.slice(1) : hex;
 
-  let r: number, g: number, b: number, a: number = alpha;
+  let r: number,
+    g: number,
+    b: number,
+    a: number = alpha;
 
   if (cleaned.length === 3) {
     // #RGB format
@@ -52,5 +55,5 @@ export function parseColor(color: string | RGBAColor, alpha: number = 1): RGBACo
   if (Array.isArray(color)) {
     return color as RGBAColor;
   }
-  return hexToRGBA(color, alpha);
+  return hexToRGBA(color as string, alpha);
 }

@@ -253,7 +253,14 @@ export class HistogramRenderPass implements RenderPass {
     const colorLoc = shader.attributes.get('a_color');
     if (colorLoc !== undefined) {
       gl.enableVertexAttribArray(colorLoc);
-      gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        colorLoc,
+        4,
+        gl.FLOAT,
+        false,
+        stride,
+        2 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     // a_barBounds (vec4) - only for rounded shader
@@ -261,7 +268,14 @@ export class HistogramRenderPass implements RenderPass {
       const boundsLoc = shader.attributes.get('a_barBounds');
       if (boundsLoc !== undefined) {
         gl.enableVertexAttribArray(boundsLoc);
-        gl.vertexAttribPointer(boundsLoc, 4, gl.FLOAT, false, stride, 6 * Float32Array.BYTES_PER_ELEMENT);
+        gl.vertexAttribPointer(
+          boundsLoc,
+          4,
+          gl.FLOAT,
+          false,
+          stride,
+          6 * Float32Array.BYTES_PER_ELEMENT
+        );
       }
     }
 

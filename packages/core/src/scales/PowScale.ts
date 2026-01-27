@@ -22,7 +22,10 @@ export class PowScale implements ContinuousScale {
     } else {
       this.type = 'pow';
       this.exponent = (config as PowScaleConfig)?.exponent ?? 2;
-      this.d3Scale = scalePow<number, number>().exponent(this.exponent).domain([0, 1]).range([0, 1]);
+      this.d3Scale = scalePow<number, number>()
+        .exponent(this.exponent)
+        .domain([0, 1])
+        .range([0, 1]);
     }
 
     if (config?.clamp) {

@@ -184,28 +184,56 @@ export class HistogramLinePass implements RenderPass {
       const nextPosLoc = shader.attributes.get('a_nextPosition');
       if (nextPosLoc !== undefined) {
         gl.enableVertexAttribArray(nextPosLoc);
-        gl.vertexAttribPointer(nextPosLoc, 2, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+        gl.vertexAttribPointer(
+          nextPosLoc,
+          2,
+          gl.FLOAT,
+          false,
+          stride,
+          2 * Float32Array.BYTES_PER_ELEMENT
+        );
       }
 
       // a_direction (float)
       const dirLoc = shader.attributes.get('a_direction');
       if (dirLoc !== undefined) {
         gl.enableVertexAttribArray(dirLoc);
-        gl.vertexAttribPointer(dirLoc, 1, gl.FLOAT, false, stride, 4 * Float32Array.BYTES_PER_ELEMENT);
+        gl.vertexAttribPointer(
+          dirLoc,
+          1,
+          gl.FLOAT,
+          false,
+          stride,
+          4 * Float32Array.BYTES_PER_ELEMENT
+        );
       }
 
       // a_color (vec4)
       const colorLoc = shader.attributes.get('a_color');
       if (colorLoc !== undefined) {
         gl.enableVertexAttribArray(colorLoc);
-        gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, stride, 5 * Float32Array.BYTES_PER_ELEMENT);
+        gl.vertexAttribPointer(
+          colorLoc,
+          4,
+          gl.FLOAT,
+          false,
+          stride,
+          5 * Float32Array.BYTES_PER_ELEMENT
+        );
       }
 
       // a_lineWidth (float)
       const widthLoc = shader.attributes.get('a_lineWidth');
       if (widthLoc !== undefined) {
         gl.enableVertexAttribArray(widthLoc);
-        gl.vertexAttribPointer(widthLoc, 1, gl.FLOAT, false, stride, 9 * Float32Array.BYTES_PER_ELEMENT);
+        gl.vertexAttribPointer(
+          widthLoc,
+          1,
+          gl.FLOAT,
+          false,
+          stride,
+          9 * Float32Array.BYTES_PER_ELEMENT
+        );
       }
 
       // Draw triangles
@@ -253,14 +281,14 @@ export class HistogramLinePass implements RenderPass {
       // Vertex format: position(2), nextPosition(2), direction(1), color(4), lineWidth(1)
 
       // Triangle 1: p0-left, p0-right, p1-left
-      vertices.push(p0.x, y0, p1.x, y1, -1, r, g, b, a, lineWidth);  // p0-left
-      vertices.push(p0.x, y0, p1.x, y1, 1, r, g, b, a, lineWidth);   // p0-right
-      vertices.push(p1.x, y1, p0.x, y0, 1, r, g, b, a, lineWidth);   // p1-left (direction flipped)
+      vertices.push(p0.x, y0, p1.x, y1, -1, r, g, b, a, lineWidth); // p0-left
+      vertices.push(p0.x, y0, p1.x, y1, 1, r, g, b, a, lineWidth); // p0-right
+      vertices.push(p1.x, y1, p0.x, y0, 1, r, g, b, a, lineWidth); // p1-left (direction flipped)
 
       // Triangle 2: p1-left, p0-right, p1-right
-      vertices.push(p1.x, y1, p0.x, y0, 1, r, g, b, a, lineWidth);   // p1-left (direction flipped)
-      vertices.push(p0.x, y0, p1.x, y1, 1, r, g, b, a, lineWidth);   // p0-right
-      vertices.push(p1.x, y1, p0.x, y0, -1, r, g, b, a, lineWidth);  // p1-right (direction flipped)
+      vertices.push(p1.x, y1, p0.x, y0, 1, r, g, b, a, lineWidth); // p1-left (direction flipped)
+      vertices.push(p0.x, y0, p1.x, y1, 1, r, g, b, a, lineWidth); // p0-right
+      vertices.push(p1.x, y1, p0.x, y0, -1, r, g, b, a, lineWidth); // p1-right (direction flipped)
     }
 
     return vertices;

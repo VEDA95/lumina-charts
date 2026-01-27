@@ -82,12 +82,7 @@ export type {
 } from './events.js';
 
 // Theme types
-export type {
-  Theme,
-  ThemeColors,
-  ThemeStyleConfig,
-  RGBAColor,
-} from './theme.js';
+export type { Theme, ThemeColors, ThemeStyleConfig, RGBAColor } from './theme.js';
 
 export { DEFAULT_THEME_STYLES } from './theme.js';
 
@@ -136,13 +131,7 @@ export type {
   HeatmapVertexData,
 } from './heatmap.js';
 
-export {
-  SEQUENTIAL_BLUE,
-  SEQUENTIAL_GREEN,
-  DIVERGING_RWB,
-  VIRIDIS,
-  PLASMA,
-} from './heatmap.js';
+export { SEQUENTIAL_BLUE, SEQUENTIAL_GREEN, DIVERGING_RWB, VIRIDIS, PLASMA } from './heatmap.js';
 
 // Network chart types
 export type {

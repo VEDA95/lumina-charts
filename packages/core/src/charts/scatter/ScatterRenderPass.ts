@@ -95,21 +95,42 @@ export class ScatterRenderPass implements RenderPass {
     const colorLoc = this.shader.attributes.get('a_color');
     if (colorLoc !== undefined) {
       gl.enableVertexAttribArray(colorLoc);
-      gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        colorLoc,
+        4,
+        gl.FLOAT,
+        false,
+        stride,
+        2 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     // a_size (float)
     const sizeLoc = this.shader.attributes.get('a_size');
     if (sizeLoc !== undefined) {
       gl.enableVertexAttribArray(sizeLoc);
-      gl.vertexAttribPointer(sizeLoc, 1, gl.FLOAT, false, stride, 6 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        sizeLoc,
+        1,
+        gl.FLOAT,
+        false,
+        stride,
+        6 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     // a_shape (float)
     const shapeLoc = this.shader.attributes.get('a_shape');
     if (shapeLoc !== undefined) {
       gl.enableVertexAttribArray(shapeLoc);
-      gl.vertexAttribPointer(shapeLoc, 1, gl.FLOAT, false, stride, 7 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        shapeLoc,
+        1,
+        gl.FLOAT,
+        false,
+        stride,
+        7 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     gl.bindVertexArray(null);

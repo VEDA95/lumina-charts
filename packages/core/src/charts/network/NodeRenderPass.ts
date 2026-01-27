@@ -94,7 +94,7 @@ export class NodeRenderPass implements RenderPass {
    */
   updateData(nodes: ProcessedNode[]): void {
     this.nodes = nodes;
-    this.hasHighlighted = nodes.some(n => n.highlighted || n.hovered);
+    this.hasHighlighted = nodes.some((n) => n.highlighted || n.hovered);
     this.uploadNodeData();
   }
 
@@ -139,14 +139,7 @@ export class NodeRenderPass implements RenderPass {
     // Create quad buffer (unit quad: -1 to 1)
     this.quadBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
-    const quadVertices = new Float32Array([
-      -1, -1,
-      1, -1,
-      -1, 1,
-      -1, 1,
-      1, -1,
-      1, 1,
-    ]);
+    const quadVertices = new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]);
     gl.bufferData(gl.ARRAY_BUFFER, quadVertices, gl.STATIC_DRAW);
 
     // Setup quad vertex attribute (per-vertex)
@@ -231,8 +224,12 @@ export class NodeRenderPass implements RenderPass {
     for (const node of this.nodes) {
       const [r, g, b, a] = node.color;
       instanceData.push(
-        node.pixelX, node.pixelY,
-        r, g, b, a,
+        node.pixelX,
+        node.pixelY,
+        r,
+        g,
+        b,
+        a,
         node.radius,
         node.highlighted ? 1.0 : 0.0,
         node.hovered ? 1.0 : 0.0,

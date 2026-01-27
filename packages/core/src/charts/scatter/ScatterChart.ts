@@ -526,8 +526,10 @@ export class ScatterChart extends BaseChart {
     const coords = this.axisRenderer.pixelToData(cssX, cssY);
     // For scatter charts, coerce values to numbers (handles time scale timestamps)
     return {
-      x: typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
-      y: typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
+      x:
+        typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
+      y:
+        typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
     };
   }
 

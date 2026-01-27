@@ -129,7 +129,9 @@ export class ScaleFactory {
    * Check if a scale type is continuous (numeric)
    */
   static isContinuous(type: ScaleType): boolean {
-    return type === 'linear' || type === 'log' || type === 'pow' || type === 'sqrt' || type === 'symlog';
+    return (
+      type === 'linear' || type === 'log' || type === 'pow' || type === 'sqrt' || type === 'symlog'
+    );
   }
 
   /**
@@ -149,7 +151,14 @@ export class ScaleFactory {
   /**
    * Get a continuous scale (type-safe helper)
    */
-  static createContinuous(config: LinearScaleConfig | LogScaleConfig | PowScaleConfig | SqrtScaleConfig | SymlogScaleConfig): ContinuousScale {
+  static createContinuous(
+    config:
+      | LinearScaleConfig
+      | LogScaleConfig
+      | PowScaleConfig
+      | SqrtScaleConfig
+      | SymlogScaleConfig
+  ): ContinuousScale {
     return ScaleFactory.create(config) as ContinuousScale;
   }
 }

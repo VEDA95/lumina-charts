@@ -485,7 +485,10 @@ export class BarChart extends BaseChart {
       // Generate bars for each series and data point
       for (let seriesIndex = 0; seriesIndex < visibleSeries.length; seriesIndex++) {
         const s = visibleSeries[seriesIndex];
-        const rawColor = s.style?.color ?? this.barOptions.barColor ?? DEFAULT_COLORS[seriesIndex % DEFAULT_COLORS.length];
+        const rawColor =
+          s.style?.color ??
+          this.barOptions.barColor ??
+          DEFAULT_COLORS[seriesIndex % DEFAULT_COLORS.length];
         const color: RGBAColor = typeof rawColor === 'string' ? parseColor(rawColor) : rawColor;
 
         for (const point of s.data) {
@@ -537,7 +540,10 @@ export class BarChart extends BaseChart {
       // Generate bars for each series and category
       for (let seriesIndex = 0; seriesIndex < visibleSeries.length; seriesIndex++) {
         const s = visibleSeries[seriesIndex];
-        const rawColor = s.style?.color ?? this.barOptions.barColor ?? DEFAULT_COLORS[seriesIndex % DEFAULT_COLORS.length];
+        const rawColor =
+          s.style?.color ??
+          this.barOptions.barColor ??
+          DEFAULT_COLORS[seriesIndex % DEFAULT_COLORS.length];
         const color: RGBAColor = typeof rawColor === 'string' ? parseColor(rawColor) : rawColor;
 
         for (const point of s.data) {
@@ -547,7 +553,8 @@ export class BarChart extends BaseChart {
           // Calculate bar position
           // Category center is at integer position in domain space (0, 1, 2, ...)
           // With domain [-0.5, categoryCount-0.5], this centers bars with padding on edges
-          const categoryCenterX = plotLeft + ((categoryIndex - domain.x[0]) / domainWidth) * plotWidth;
+          const categoryCenterX =
+            plotLeft + ((categoryIndex - domain.x[0]) / domainWidth) * plotWidth;
           const groupStartX = categoryCenterX - groupWidth / 2;
           const barX = groupStartX + seriesIndex * (barWidth + barGap);
 
@@ -645,7 +652,11 @@ export class BarChart extends BaseChart {
     }
 
     // Update bar-specific options
-    if (options.barGap !== undefined || options.groupGap !== undefined || options.barColor !== undefined) {
+    if (
+      options.barGap !== undefined ||
+      options.groupGap !== undefined ||
+      options.barColor !== undefined
+    ) {
       Object.assign(this.barOptions, options);
       if (this.series.length > 0) {
         this.updateBarLayout(this.series);
@@ -714,8 +725,10 @@ export class BarChart extends BaseChart {
     const coords = this.axisRenderer.pixelToData(cssX, cssY);
     // Coerce values to numbers for bar charts
     return {
-      x: typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
-      y: typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
+      x:
+        typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
+      y:
+        typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
     };
   }
 

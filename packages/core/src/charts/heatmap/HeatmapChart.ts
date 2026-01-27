@@ -2,12 +2,7 @@
  * Heatmap chart implementation for matrix/grid data visualization
  */
 
-import type {
-  RenderPass,
-  Series,
-  RGBAColor,
-  DataDomain,
-} from '../../types/index.js';
+import type { RenderPass, Series, RGBAColor, DataDomain } from '../../types/index.js';
 import type {
   HeatmapChartOptions,
   HeatmapChartConfig,
@@ -100,9 +95,8 @@ export class HeatmapChart extends BaseChart {
     const baseConfig = this.heatmapOptions?.xAxis ?? {};
 
     // Generate explicit tick values at integer positions (cell centers)
-    const tickValues = this.numCols > 0
-      ? Array.from({ length: this.numCols }, (_, i) => i)
-      : undefined;
+    const tickValues =
+      this.numCols > 0 ? Array.from({ length: this.numCols }, (_, i) => i) : undefined;
 
     return {
       ...baseConfig,
@@ -130,9 +124,8 @@ export class HeatmapChart extends BaseChart {
     const baseConfig = this.heatmapOptions?.yAxis ?? {};
 
     // Generate explicit tick values at integer positions (cell centers)
-    const tickValues = this.numRows > 0
-      ? Array.from({ length: this.numRows }, (_, i) => i)
-      : undefined;
+    const tickValues =
+      this.numRows > 0 ? Array.from({ length: this.numRows }, (_, i) => i) : undefined;
 
     return {
       ...baseConfig,
@@ -236,10 +229,10 @@ export class HeatmapChart extends BaseChart {
         cell.selected = !cell.selected;
 
         // Emit selection event (heatmap-specific format)
-        const selectedCells = this.cells.filter(c => c.selected);
+        const selectedCells = this.cells.filter((c) => c.selected);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (this.emit as any)('selectionChange', {
-          selected: new Set(selectedCells.map(c => `${c.row}-${c.col}`)),
+          selected: new Set(selectedCells.map((c) => `${c.row}-${c.col}`)),
           cells: selectedCells,
           added: cell.selected ? [`${cell.row}-${cell.col}`] : [],
           removed: cell.selected ? [] : [`${cell.row}-${cell.col}`],
@@ -433,7 +426,8 @@ export class HeatmapChart extends BaseChart {
     });
 
     // Determine if we should animate
-    const shouldAnimate = (options?.animate ?? this.heatmapOptions.animate ?? false) && hadPreviousData;
+    const shouldAnimate =
+      (options?.animate ?? this.heatmapOptions.animate ?? false) && hadPreviousData;
 
     if (shouldAnimate && oldColorMap.size > 0) {
       // Animate with color interpolation
@@ -532,11 +526,16 @@ export class HeatmapChart extends BaseChart {
     }
 
     // Use our overridden setData with animation options
-    this.setData([{
-      id: 'heatmap',
-      name: 'Heatmap',
-      data: data as unknown as { x: number; y: number }[],
-    }], options);
+    this.setData(
+      [
+        {
+          id: 'heatmap',
+          name: 'Heatmap',
+          data: data as unknown as { x: number; y: number }[],
+        },
+      ],
+      options
+    );
   }
 
   /**
@@ -716,9 +715,9 @@ export class HeatmapChart extends BaseChart {
       const mid = midpoint ?? (min + max) / 2;
       let t: number;
       if (clampedValue < mid) {
-        t = 0.5 - 0.5 * (mid - clampedValue) / (mid - min || 1);
+        t = 0.5 - (0.5 * (mid - clampedValue)) / (mid - min || 1);
       } else {
-        t = 0.5 + 0.5 * (clampedValue - mid) / (max - mid || 1);
+        t = 0.5 + (0.5 * (clampedValue - mid)) / (max - mid || 1);
       }
       return this.interpolateColors(colors, t);
     }
@@ -726,10 +725,7 @@ export class HeatmapChart extends BaseChart {
     if (type === 'discrete') {
       const numSteps = steps ?? colors.length;
       const bucketSize = (max - min) / numSteps;
-      const bucket = Math.min(
-        Math.floor((clampedValue - min) / bucketSize),
-        colors.length - 1
-      );
+      const bucket = Math.min(Math.floor((clampedValue - min) / bucketSize), colors.length - 1);
       return [...colors[bucket]] as RGBAColor;
     }
 

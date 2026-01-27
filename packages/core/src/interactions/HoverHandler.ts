@@ -354,7 +354,11 @@ export class HoverHandler extends BaseInteractionHandler {
     // Check if this looks like a timestamp
     if (this.looksLikeTimestamp(value)) {
       const date = new Date(value);
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return (
+        date.toLocaleDateString() +
+        ' ' +
+        date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      );
     }
 
     // Regular number formatting

@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@lumina-charts/core": "workspace:*"
+    "@lumina-charts/core": "workspace:*",
+    "@lumina-charts/themes": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

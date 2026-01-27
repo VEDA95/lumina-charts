@@ -3,13 +3,12 @@
  * Extends ScatterChart to add z-value → size mapping
  */
 
-import type {
-  Series,
-  DataPoint,
-  BubbleDataPoint,
-  RGBAColor,
-} from '../../types/index.js';
-import { ScatterChart, type ScatterChartOptions, type ScatterChartConfig } from '../scatter/ScatterChart.js';
+import type { Series, DataPoint, BubbleDataPoint, RGBAColor } from '../../types/index.js';
+import {
+  ScatterChart,
+  type ScatterChartOptions,
+  type ScatterChartConfig,
+} from '../scatter/ScatterChart.js';
 
 /**
  * Configuration for bubble sizing
@@ -76,11 +75,13 @@ export class BubbleChart extends ScatterChart {
         // Override pointSize with our z-value mapper
         pointSize: (point: DataPoint) => this.getPointSize(point),
         // Override pointColor with semi-transparent default
-        pointColor: config.options?.pointColor ?? ((_point: DataPoint, _index: number, _series: Series) => {
-          // Use series index to pick color, apply opacity
-          const baseColor = DEFAULT_BUBBLE_COLORS[0];
-          return [baseColor[0], baseColor[1], baseColor[2], opacity] as RGBAColor;
-        }),
+        pointColor:
+          config.options?.pointColor ??
+          ((_point: DataPoint, _index: number, _series: Series) => {
+            // Use series index to pick color, apply opacity
+            const baseColor = DEFAULT_BUBBLE_COLORS[0];
+            return [baseColor[0], baseColor[1], baseColor[2], opacity] as RGBAColor;
+          }),
       },
     };
 

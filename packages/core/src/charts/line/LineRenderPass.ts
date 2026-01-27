@@ -198,7 +198,14 @@ export class LineRenderPass implements RenderPass {
     const colorLoc = this.shader!.attributes.get('a_color');
     if (colorLoc !== undefined) {
       gl.enableVertexAttribArray(colorLoc);
-      gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        colorLoc,
+        4,
+        gl.FLOAT,
+        false,
+        stride,
+        2 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     gl.bindVertexArray(null);
@@ -293,19 +300,40 @@ export class LineRenderPass implements RenderPass {
     const colorLoc = this.pointShader!.attributes.get('a_color');
     if (colorLoc !== undefined) {
       gl.enableVertexAttribArray(colorLoc);
-      gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        colorLoc,
+        4,
+        gl.FLOAT,
+        false,
+        stride,
+        2 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     const sizeLoc = this.pointShader!.attributes.get('a_size');
     if (sizeLoc !== undefined) {
       gl.enableVertexAttribArray(sizeLoc);
-      gl.vertexAttribPointer(sizeLoc, 1, gl.FLOAT, false, stride, 6 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        sizeLoc,
+        1,
+        gl.FLOAT,
+        false,
+        stride,
+        6 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     const shapeLoc = this.pointShader!.attributes.get('a_shape');
     if (shapeLoc !== undefined) {
       gl.enableVertexAttribArray(shapeLoc);
-      gl.vertexAttribPointer(shapeLoc, 1, gl.FLOAT, false, stride, 7 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        shapeLoc,
+        1,
+        gl.FLOAT,
+        false,
+        stride,
+        7 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     gl.bindVertexArray(null);
@@ -412,7 +440,14 @@ export class LineRenderPass implements RenderPass {
     const normalizedYLoc = this.areaShader!.attributes.get('a_normalizedY');
     if (normalizedYLoc !== undefined) {
       gl.enableVertexAttribArray(normalizedYLoc);
-      gl.vertexAttribPointer(normalizedYLoc, 1, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        normalizedYLoc,
+        1,
+        gl.FLOAT,
+        false,
+        stride,
+        2 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     gl.bindVertexArray(null);

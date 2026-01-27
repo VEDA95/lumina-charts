@@ -39,10 +39,7 @@ export interface CurvePoint {
 export function calculateKDE(values: number[], config: KDEConfig = {}): CurvePoint[] {
   if (values.length === 0) return [];
 
-  const {
-    kernel = 'gaussian',
-    points = 100,
-  } = config;
+  const { kernel = 'gaussian', points = 100 } = config;
 
   // Calculate domain
   const dataMin = arrayMin(values);

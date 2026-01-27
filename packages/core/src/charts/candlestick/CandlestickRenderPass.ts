@@ -331,14 +331,28 @@ export class CandlestickRenderPass implements RenderPass {
     const colorLoc = shader.attributes.get('a_color');
     if (colorLoc !== undefined) {
       gl.enableVertexAttribArray(colorLoc);
-      gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        colorLoc,
+        4,
+        gl.FLOAT,
+        false,
+        stride,
+        2 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     // a_hovered (float)
     const hoveredLoc = shader.attributes.get('a_hovered');
     if (hoveredLoc !== undefined) {
       gl.enableVertexAttribArray(hoveredLoc);
-      gl.vertexAttribPointer(hoveredLoc, 1, gl.FLOAT, false, stride, 6 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        hoveredLoc,
+        1,
+        gl.FLOAT,
+        false,
+        stride,
+        6 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
   }
 

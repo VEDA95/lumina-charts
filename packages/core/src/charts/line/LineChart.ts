@@ -390,7 +390,9 @@ export class LineChart extends BaseChart {
       const currentLevel = this.currentLODLevels.get(s.id) ?? 0;
 
       if (lodLevel.level !== currentLevel) {
-        console.log(`LOD level change: ${currentLevel} -> ${lodLevel.level} (${lodLevel.pointCount} points)`);
+        console.log(
+          `LOD level change: ${currentLevel} -> ${lodLevel.level} (${lodLevel.pointCount} points)`
+        );
         needsUpdate = true;
         break;
       }
@@ -488,8 +490,10 @@ export class LineChart extends BaseChart {
     const coords = this.axisRenderer.pixelToData(cssX, cssY);
     // Coerce values to numbers for line charts
     return {
-      x: typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
-      y: typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
+      x:
+        typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
+      y:
+        typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
     };
   }
 

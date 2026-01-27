@@ -16,7 +16,10 @@ export class SymlogScale implements ContinuousScale {
 
   constructor(config?: SymlogScaleConfig) {
     this.constant = config?.constant ?? 1;
-    this.d3Scale = scaleSymlog<number, number>().constant(this.constant).domain([-10, 10]).range([0, 1]);
+    this.d3Scale = scaleSymlog<number, number>()
+      .constant(this.constant)
+      .domain([-10, 10])
+      .range([0, 1]);
 
     if (config?.clamp) {
       this.d3Scale.clamp(true);

@@ -231,14 +231,14 @@ export interface NetworkVertexData {
  * Default group color palette (10 distinct colors matching reference images)
  */
 export const DEFAULT_GROUP_COLORS: RGBAColor[] = [
-  [0.27, 0.53, 0.79, 1.0],  // Blue
-  [0.69, 0.87, 0.29, 1.0],  // Lime green
-  [0.36, 0.36, 0.45, 1.0],  // Dark gray
-  [0.95, 0.61, 0.31, 1.0],  // Orange
-  [0.45, 0.76, 0.85, 1.0],  // Light blue
-  [0.95, 0.85, 0.35, 1.0],  // Yellow
-  [0.91, 0.45, 0.55, 1.0],  // Pink/Red
-  [0.55, 0.35, 0.65, 1.0],  // Purple
-  [0.35, 0.75, 0.55, 1.0],  // Teal/Green
-  [0.75, 0.55, 0.45, 1.0],  // Brown
+  [0.27, 0.53, 0.79, 1.0], // Blue
+  [0.69, 0.87, 0.29, 1.0], // Lime green
+  [0.36, 0.36, 0.45, 1.0], // Dark gray
+  [0.95, 0.61, 0.31, 1.0], // Orange
+  [0.45, 0.76, 0.85, 1.0], // Light blue
+  [0.95, 0.85, 0.35, 1.0], // Yellow
+  [0.91, 0.45, 0.55, 1.0], // Pink/Red
+  [0.55, 0.35, 0.65, 1.0], // Purple
+  [0.35, 0.75, 0.55, 1.0], // Teal/Green
+  [0.75, 0.55, 0.45, 1.0], // Brown
 ];

@@ -33,6 +33,8 @@ import {
   type RGBAColor,
 } from '@lumina-charts/core';
 
+import { themes, type Theme } from '@lumina-charts/themes';
+
 // DOM elements
 const chartContainer = document.getElementById('chart')!;
 const btnScatter = document.getElementById('btn-scatter')!;
@@ -98,9 +100,12 @@ const axisScaleOptions = document.getElementById('axis-scale-options')!;
 const themeToggle = document.getElementById('theme-toggle')!;
 const themeToggleThumb = document.getElementById('theme-toggle-thumb')!;
 const themeLabel = document.getElementById('theme-label')!;
+const chartThemeSelect = document.getElementById('chart-theme-select') as HTMLSelectElement;
 
 // Theme state
 let isDarkMode = false;
+let currentChartTheme: 'shadcn' | 'classicLight' | 'classicDark' | 'vibrant' | 'highContrast' =
+  'shadcn';
 
 // Initialize theme from localStorage or system preference
 function initializeTheme(): void {
@@ -144,12 +149,72 @@ function toggleTheme(): void {
 // Theme toggle handler
 themeToggle.addEventListener('click', toggleTheme);
 
+// Chart theme change handler
+chartThemeSelect.addEventListener('change', () => {
+  currentChartTheme = chartThemeSelect.value as typeof currentChartTheme;
+  // Recreate chart with new theme
+  createChart(currentChartType);
+  loadData(currentPointCount);
+  console.log(`Chart theme changed to: ${currentChartTheme}`);
+});
+
 // Initialize theme on load
 initializeTheme();
 
-// Get current theme config
+// Get current theme config (for shadcn or custom themes)
 function getThemeConfig() {
-  return isDarkMode ? SHADCN_DARK_THEME_CONFIG : SHADCN_THEME_CONFIG;
+  if (currentChartTheme === 'shadcn') {
+    return isDarkMode ? SHADCN_DARK_THEME_CONFIG : SHADCN_THEME_CONFIG;
+  }
+
+  // For custom themes from @lumina-charts/themes
+  const theme = themes[currentChartTheme as keyof typeof themes] as Theme;
+  return {
+    showAxisLines: theme.styles.showAxisLines,
+    showAxisTicks: theme.styles.showAxisTicks,
+    axisLabel: theme.colors.axisLabel,
+    barCornerRadius: theme.styles.barCornerRadius,
+  };
+}
+
+// Get current chart theme's series colors
+function getChartThemeColors(): RGBAColor[] {
+  if (currentChartTheme === 'shadcn') {
+    return SHADCN_COLORS_RGBA as RGBAColor[];
+  }
+
+  const theme = themes[currentChartTheme as keyof typeof themes] as Theme;
+  return theme.colors.seriesRGBA as RGBAColor[];
+}
+
+// Get current chart theme's grid color
+function getChartGridColor(): RGBAColor {
+  if (currentChartTheme === 'shadcn') {
+    return getShadcnGridColor(isDarkMode);
+  }
+
+  const theme = themes[currentChartTheme as keyof typeof themes] as Theme;
+  return theme.colors.gridRGBA;
+}
+
+// Get current chart theme's background color
+function getChartBackgroundColor(): RGBAColor {
+  if (currentChartTheme === 'shadcn') {
+    return isDarkMode ? ([0.035, 0.035, 0.043, 1.0] as RGBAColor) : ([1, 1, 1, 1] as RGBAColor);
+  }
+
+  const theme = themes[currentChartTheme as keyof typeof themes] as Theme;
+  return theme.colors.backgroundRGBA;
+}
+
+// Get current chart theme's label color (for pie/network/heatmap labels)
+function getChartLabelColor(): string {
+  if (currentChartTheme === 'shadcn') {
+    return isDarkMode ? '#fafafa' : '#18181b';
+  }
+
+  const theme = themes[currentChartTheme as keyof typeof themes] as Theme;
+  return theme.colors.foreground;
 }
 
 // FPS tracking
@@ -179,7 +244,7 @@ function updateMemory(): void {
   if ((performance as any).memory) {
     const memory = (performance as any).memory;
     const usedMB = Math.round(memory.usedJSHeapSize / 1024 / 1024);
-    const totalMB = Math.round(memory.jsHeapSizeLimit / 1024 / 1024);
+    const _totalMB = Math.round(memory.jsHeapSizeLimit / 1024 / 1024);
     statMemory.textContent = `${usedMB} MB`;
   } else {
     statMemory.textContent = 'N/A';
@@ -191,7 +256,17 @@ requestAnimationFrame(updateFps);
 setInterval(updateMemory, 1000);
 
 // Current chart type and instance
-let currentChartType: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' | 'candlestick' | 'boxplot' | 'heatmap' | 'network' = 'scatter';
+let currentChartType:
+  | 'scatter'
+  | 'line'
+  | 'bar'
+  | 'histogram'
+  | 'bubble'
+  | 'pie'
+  | 'candlestick'
+  | 'boxplot'
+  | 'heatmap'
+  | 'network' = 'scatter';
 let chart: BaseChart | null = null;
 let barChart: BarChart | null = null; // Keep reference for setCategories
 let histogramChart: HistogramChart | null = null; // Keep reference for setValues
@@ -215,8 +290,7 @@ function getYScaleType(): ScaleType {
   return yScaleSelect.value as ScaleType;
 }
 
-// Chart options (generated dynamically to include current scale types)
-// Using shadcn theme for modern, minimal aesthetics
+// Chart options (generated dynamically to include current scale types and theme)
 function getChartOptions() {
   const themeConfig = getThemeConfig();
   return {
@@ -241,13 +315,25 @@ function getChartOptions() {
       labelStyle: 'minimal' as const,
       labelColor: themeConfig.axisLabel,
     },
-    gridColor: getShadcnGridColor(isDarkMode),
-    backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
+    gridColor: getChartGridColor(),
+    backgroundColor: getChartBackgroundColor(),
   };
 }
 
 // Create chart based on type
-function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' | 'pie' | 'candlestick' | 'boxplot' | 'heatmap' | 'network'): void {
+function createChart(
+  type:
+    | 'scatter'
+    | 'line'
+    | 'bar'
+    | 'histogram'
+    | 'bubble'
+    | 'pie'
+    | 'candlestick'
+    | 'boxplot'
+    | 'heatmap'
+    | 'network'
+): void {
   // Dispose existing chart
   if (chart) {
     chart.dispose();
@@ -403,10 +489,11 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
           position: 'outside',
           showPercentage: true,
           minAngleForLabel: 15,
-          fontColor: isDarkMode ? '#fafafa' : '#18181b',
+          fontColor: getChartLabelColor(),
         },
         hoverBrighten: 1.15,
-        backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
+        backgroundColor: getChartBackgroundColor(),
+        sliceColors: getChartThemeColors(),
         animate: true,
         animationDuration: 300,
       },
@@ -434,8 +521,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
           ticks: { count: 8 },
           labelColor: themeConfig.axisLabel,
         },
-        gridColor: getShadcnGridColor(isDarkMode),
-        backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
+        gridColor: getChartGridColor(),
+        backgroundColor: getChartBackgroundColor(),
         upColor: [0.34, 0.76, 0.45, 1.0], // green-500
         downColor: [0.94, 0.33, 0.33, 1.0], // red-500
         candleWidth: 0.8,
@@ -449,6 +536,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     const orientation = boxplotHorizontal.checked ? 'horizontal' : 'vertical';
     const themeConfig = getThemeConfig();
 
+    // Get boxplot colors from theme
+    const boxplotThemeColors = getChartThemeColors();
     boxplotChart = new BoxplotChart({
       container: chartContainer,
       options: {
@@ -466,12 +555,12 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
           ticks: { count: 8 },
           labelColor: themeConfig.axisLabel,
         },
-        gridColor: getShadcnGridColor(isDarkMode),
-        backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
-        boxColor: [0.37, 0.51, 0.96, 1.0], // blue-500
-        medianColor: [0.98, 0.45, 0.09, 1.0], // orange-500
-        whiskerColor: isDarkMode ? [0.92, 0.92, 0.94, 1.0] : [0.23, 0.23, 0.26, 1.0], // zinc-200 / zinc-800 for better contrast
-        outlierColor: [0.94, 0.33, 0.33, 1.0], // red-500
+        gridColor: getChartGridColor(),
+        backgroundColor: getChartBackgroundColor(),
+        boxColor: boxplotThemeColors[0] as [number, number, number, number],
+        medianColor: boxplotThemeColors[3] as [number, number, number, number],
+        whiskerColor: isDarkMode ? [0.92, 0.92, 0.94, 1.0] : [0.23, 0.23, 0.26, 1.0],
+        outlierColor: boxplotThemeColors[2] as [number, number, number, number],
         boxWidth: 0.6,
         whiskerWidth: 2,
         outlierSize: 4,
@@ -509,8 +598,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
           ticks: { count: 10 },
           labelColor: themeConfig.axisLabel,
         },
-        gridColor: getShadcnGridColor(isDarkMode),
-        backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
+        gridColor: getChartGridColor(),
+        backgroundColor: getChartBackgroundColor(),
         colorScale: {
           type: scaleType,
           colors,
@@ -518,7 +607,7 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
         cellGap: 1,
         showLabels: heatmapLabels.checked,
         labelThreshold: 25,
-        labelColor: isDarkMode ? '#fafafa' : '#18181b',
+        labelColor: getChartLabelColor(),
         hoverBrighten: 1.2,
       },
     });
@@ -527,6 +616,8 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     // Get current layout setting
     const layout = networkRadial.checked ? 'radial' : 'force';
 
+    // Get network colors from theme for group colors
+    const networkThemeColors = getChartThemeColors();
     networkChart = new NetworkChart({
       container: chartContainer,
       options: {
@@ -540,8 +631,9 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
         dimOpacity: 0.1,
         hoverBrighten: 1.2,
         legendPosition: 'top-right',
-        backgroundColor: isDarkMode ? [0.035, 0.035, 0.043, 1.0] as RGBAColor : [1, 1, 1, 1] as RGBAColor,
-        labelColor: isDarkMode ? '#fafafa' : '#18181b',
+        backgroundColor: getChartBackgroundColor(),
+        labelColor: getChartLabelColor(),
+        groupColors: networkThemeColors as [number, number, number, number][],
         animate: true,
         animationDuration: 300,
       },
@@ -558,7 +650,14 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
     chart?.addInteraction(zoomHandler);
 
     // Bar, histogram, candlestick, boxplot, heatmap, and network have their own hover handling, other charts use HoverHandler
-    if (type !== 'bar' && type !== 'histogram' && type !== 'candlestick' && type !== 'boxplot' && type !== 'heatmap' && type !== 'network') {
+    if (
+      type !== 'bar' &&
+      type !== 'histogram' &&
+      type !== 'candlestick' &&
+      type !== 'boxplot' &&
+      type !== 'heatmap' &&
+      type !== 'network'
+    ) {
       const hoverHandler = new HoverHandler({ showTooltip: true, tooltipStyle: 'shadcn' });
       selectionHandler = new SelectionHandler({ mode: 'single' });
       chart?.addInteraction(hoverHandler);
@@ -617,8 +716,10 @@ function createChart(type: 'scatter' | 'line' | 'bar' | 'histogram' | 'bubble' |
   });
 
   // Update button styles
-  const activeClass = 'cursor-pointer rounded-md bg-primary px-4 py-2 text-sm text-white hover:bg-primary-hover';
-  const inactiveClass = 'cursor-pointer rounded-md bg-gray-400 px-4 py-2 text-sm text-white hover:bg-gray-500';
+  const activeClass =
+    'cursor-pointer rounded-md bg-primary px-4 py-2 text-sm text-white hover:bg-primary-hover';
+  const inactiveClass =
+    'cursor-pointer rounded-md bg-gray-400 px-4 py-2 text-sm text-white hover:bg-gray-500';
 
   btnScatter.className = type === 'scatter' ? activeClass : inactiveClass;
   btnLine.className = type === 'line' ? activeClass : inactiveClass;
@@ -750,17 +851,34 @@ function generateScatterData(count: number): Series[] {
     data.push({ x, y });
   }
 
+  // Use current chart theme color for scatter points
+  const themeColors = getChartThemeColors();
+
   return [
     {
       id: 'main',
       name: 'Random Data',
       data,
+      style: { color: themeColors[0] as [number, number, number, number] },
     },
   ];
 }
 
 // Bar chart categories
-const BAR_CATEGORIES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const BAR_CATEGORIES = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 // Get timestamps for monthly data (for time scale bar charts)
 function getMonthTimestamps(monthCount: number): number[] {
@@ -778,7 +896,11 @@ function getMonthTimestamps(monthCount: number): number[] {
 }
 
 // Generate bar chart data
-function generateBarData(categoryCount: number): { series: Series[]; categories: string[]; timestamps: number[] } {
+function generateBarData(categoryCount: number): {
+  series: Series[];
+  categories: string[];
+  timestamps: number[];
+} {
   const xScaleType = getXScaleType();
   const useTimeScale = xScaleType === 'time';
   const categories = BAR_CATEGORIES.slice(0, categoryCount);
@@ -788,11 +910,12 @@ function generateBarData(categoryCount: number): { series: Series[]; categories:
   const seriesCount = Math.min(3, Math.max(1, Math.floor(categoryCount / 4)));
 
   const seriesNames = ['Product A', 'Product B', 'Product C'];
-  // Use shadcn color palette for series
+  // Use current chart theme color palette for series
+  const themeColors = getChartThemeColors();
   const seriesColors: [number, number, number, number][] = [
-    SHADCN_COLORS_RGBA[0] as [number, number, number, number], // primary blue
-    SHADCN_COLORS_RGBA[2] as [number, number, number, number], // indigo
-    SHADCN_COLORS_RGBA[4] as [number, number, number, number], // purple
+    themeColors[0] as [number, number, number, number],
+    themeColors[2] as [number, number, number, number],
+    themeColors[4] as [number, number, number, number],
   ];
 
   const result: Series[] = [];
@@ -899,24 +1022,27 @@ function generateLineData(count: number): Series[] {
     series3.push({ x, y: y3 });
   }
 
+  // Use current chart theme color palette for series
+  const themeColors = getChartThemeColors();
+
   return [
     {
       id: 'series-1',
       name: 'Sine Wave',
       data: series1,
-      style: { color: [0.4, 0.4, 0.8, 1.0] as [number, number, number, number] },
+      style: { color: themeColors[0] as [number, number, number, number] },
     },
     {
       id: 'series-2',
       name: 'Random Walk',
       data: series2,
-      style: { color: [0.8, 0.4, 0.4, 1.0] as [number, number, number, number] },
+      style: { color: themeColors[1] as [number, number, number, number] },
     },
     {
       id: 'series-3',
       name: 'Growth Trend',
       data: series3,
-      style: { color: [0.4, 0.8, 0.4, 1.0] as [number, number, number, number] },
+      style: { color: themeColors[2] as [number, number, number, number] },
     },
   ];
 }
@@ -1073,7 +1199,16 @@ function generateCandlestickData(count: number): Series[] {
 }
 
 // Boxplot category labels
-const BOXPLOT_CATEGORIES = ['Group A', 'Group B', 'Group C', 'Group D', 'Group E', 'Group F', 'Group G', 'Group H'];
+const BOXPLOT_CATEGORIES = [
+  'Group A',
+  'Group B',
+  'Group C',
+  'Group D',
+  'Group E',
+  'Group F',
+  'Group G',
+  'Group H',
+];
 
 // Generate boxplot (quartile) data
 function generateBoxplotData(categoryCount: number): Series[] {
@@ -1114,11 +1249,13 @@ function generateBoxplotData(categoryCount: number): Series[] {
     });
   }
 
-  return [{
-    id: 'boxplot',
-    name: 'Distribution',
-    data,
-  }];
+  return [
+    {
+      id: 'boxplot',
+      name: 'Distribution',
+      data,
+    },
+  ];
 }
 
 // Generate heatmap data (matrix with pattern)
@@ -1143,7 +1280,16 @@ function generateHeatmapData(rows: number, cols: number): HeatmapMatrixData {
 }
 
 // Network group names (social network style)
-const NETWORK_GROUPS = ['Engineering', 'Design', 'Marketing', 'Sales', 'Finance', 'HR', 'Product', 'Operations'];
+const NETWORK_GROUPS = [
+  'Engineering',
+  'Design',
+  'Marketing',
+  'Sales',
+  'Finance',
+  'HR',
+  'Product',
+  'Operations',
+];
 
 // Generate network data (social network style graph)
 function generateNetworkData(nodeCount: number): NetworkData {
@@ -1269,19 +1415,20 @@ function loadData(count: number): void {
   // For network charts, use 20-100 nodes based on count
   const networkNodeCount = Math.min(100, Math.max(20, Math.floor(count / 20)));
 
-  const displayCount = currentChartType === 'bar'
-    ? barCategoryCount + ' categories'
-    : currentChartType === 'pie'
-      ? pieSliceCount + ' slices'
-      : currentChartType === 'candlestick'
-        ? candleCount + ' candles'
-        : currentChartType === 'boxplot'
-          ? boxplotCategoryCount + ' boxplots'
-          : currentChartType === 'heatmap'
-            ? `${heatmapSize}x${heatmapSize} cells`
-            : currentChartType === 'network'
-              ? `${networkNodeCount} nodes`
-              : count.toLocaleString() + ' points';
+  const displayCount =
+    currentChartType === 'bar'
+      ? barCategoryCount + ' categories'
+      : currentChartType === 'pie'
+        ? pieSliceCount + ' slices'
+        : currentChartType === 'candlestick'
+          ? candleCount + ' candles'
+          : currentChartType === 'boxplot'
+            ? boxplotCategoryCount + ' boxplots'
+            : currentChartType === 'heatmap'
+              ? `${heatmapSize}x${heatmapSize} cells`
+              : currentChartType === 'network'
+                ? `${networkNodeCount} nodes`
+                : count.toLocaleString() + ' points';
   console.log(`\n========== Loading ${displayCount} (${currentChartType}) ==========`);
 
   // Data generation
@@ -1335,7 +1482,9 @@ function loadData(count: number): void {
     const heatmapData = generateHeatmapData(heatmapSize, heatmapSize);
     // Set matrix data on heatmap chart
     if (heatmapChart) {
-      heatmapChart.setMatrix(heatmapData.matrix, heatmapData.rowLabels, heatmapData.colLabels, { animate: true });
+      heatmapChart.setMatrix(heatmapData.matrix, heatmapData.rowLabels, heatmapData.colLabels, {
+        animate: true,
+      });
     }
     totalPoints = heatmapSize * heatmapSize;
   } else if (currentChartType === 'network') {
@@ -1351,11 +1500,13 @@ function loadData(count: number): void {
   console.log(`Data generation: ${genTime.toFixed(1)}ms`);
 
   // Calculate data size
-  const dataSizeBytes = totalPoints * (
-    currentChartType === 'histogram' ? 8 :
-    currentChartType === 'bubble' ? 3 * 8 : // x, y, z as float64
-    2 * 8 // x, y as float64
-  );
+  const dataSizeBytes =
+    totalPoints *
+    (currentChartType === 'histogram'
+      ? 8
+      : currentChartType === 'bubble'
+        ? 3 * 8 // x, y, z as float64
+        : 2 * 8); // x, y as float64
   console.log(
     `Data size: ~${(dataSizeBytes / 1024 / 1024).toFixed(2)} MB (${totalPoints.toLocaleString()} points)`
   );
@@ -1676,7 +1827,15 @@ lodToggle.addEventListener('change', () => {
   if (!chart) return;
 
   // Bar, histogram, pie, candlestick, boxplot, heatmap, and network charts don't have LOD
-  if (currentChartType === 'bar' || currentChartType === 'histogram' || currentChartType === 'pie' || currentChartType === 'candlestick' || currentChartType === 'boxplot' || currentChartType === 'heatmap' || currentChartType === 'network') {
+  if (
+    currentChartType === 'bar' ||
+    currentChartType === 'histogram' ||
+    currentChartType === 'pie' ||
+    currentChartType === 'candlestick' ||
+    currentChartType === 'boxplot' ||
+    currentChartType === 'heatmap' ||
+    currentChartType === 'network'
+  ) {
     console.log(`${currentChartType} charts do not support LOD`);
     return;
   }
@@ -1806,7 +1965,9 @@ function updateHeatmapColorScale(): void {
     colorScale: { type: scaleType, colors },
   });
 
-  console.log(`Heatmap color scale set to: ${heatmapDiverging.checked ? 'diverging' : heatmapSequential.checked ? 'sequential blue' : 'viridis'}`);
+  console.log(
+    `Heatmap color scale set to: ${heatmapDiverging.checked ? 'diverging' : heatmapSequential.checked ? 'sequential blue' : 'viridis'}`
+  );
 }
 
 function updateHeatmapLabels(): void {
@@ -1868,7 +2029,13 @@ yScaleSelect.addEventListener('change', updateAxisScales);
 // Update axis scale options based on chart type
 function updateAxisScaleVisibility(): void {
   // Pie, candlestick, boxplot, heatmap, and network charts don't use the standard axis scale selectors
-  if (currentChartType === 'pie' || currentChartType === 'candlestick' || currentChartType === 'boxplot' || currentChartType === 'heatmap' || currentChartType === 'network') {
+  if (
+    currentChartType === 'pie' ||
+    currentChartType === 'candlestick' ||
+    currentChartType === 'boxplot' ||
+    currentChartType === 'heatmap' ||
+    currentChartType === 'network'
+  ) {
     axisScaleOptions.classList.add('hidden');
     return;
   }

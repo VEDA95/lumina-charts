@@ -178,9 +178,8 @@ export class HistogramChart extends BaseChart {
             // Format tooltip content
             const rangeStr = `${bin.x0.toFixed(2)} - ${bin.x1.toFixed(2)}`;
             const countStr = bin.count.toString();
-            const percentStr = this.values.length > 0
-              ? ((bin.count / this.values.length) * 100).toFixed(1)
-              : '0';
+            const percentStr =
+              this.values.length > 0 ? ((bin.count / this.values.length) * 100).toFixed(1) : '0';
 
             tooltipElement.innerHTML = `
               <div style="font-weight: 500; margin-bottom: 4px;">Bin ${hit.binIndex + 1}</div>
@@ -359,7 +358,10 @@ export class HistogramChart extends BaseChart {
   /**
    * Set histogram data values
    */
-  setValues(values: number[], options?: { animate?: boolean; animationConfig?: AnimationConfig }): void {
+  setValues(
+    values: number[],
+    options?: { animate?: boolean; animationConfig?: AnimationConfig }
+  ): void {
     const hadPreviousData = this.values.length > 0;
     this.values = values;
     this.processData(options?.animate && hadPreviousData, options?.animationConfig);
@@ -400,10 +402,7 @@ export class HistogramChart extends BaseChart {
   /**
    * Enable/disable overlays
    */
-  setOverlays(options: {
-    showDensityCurve?: boolean;
-    showCumulative?: boolean;
-  }): void {
+  setOverlays(options: { showDensityCurve?: boolean; showCumulative?: boolean }): void {
     if (options.showDensityCurve !== undefined) {
       this.histogramOptions.showDensityCurve = options.showDensityCurve;
     }
@@ -719,8 +718,10 @@ export class HistogramChart extends BaseChart {
     const coords = this.axisRenderer.pixelToData(cssX, cssY);
     // For histograms, coerce values to numbers
     return {
-      x: typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
-      y: typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
+      x:
+        typeof coords.x === 'number' ? coords.x : coords.x instanceof Date ? coords.x.getTime() : 0,
+      y:
+        typeof coords.y === 'number' ? coords.y : coords.y instanceof Date ? coords.y.getTime() : 0,
     };
   }
 

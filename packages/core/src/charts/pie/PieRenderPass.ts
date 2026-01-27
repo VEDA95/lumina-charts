@@ -257,7 +257,7 @@ export class PieRenderPass implements RenderPass {
     }
 
     // Calculate angle (atan2 gives us angle from -PI to PI)
-    let angle = Math.atan2(dy, dx);
+    const angle = Math.atan2(dy, dx);
 
     // Find slice containing this angle
     for (const slice of this.slices) {
@@ -337,21 +337,42 @@ export class PieRenderPass implements RenderPass {
     const colorLoc = shader.attributes.get('a_color');
     if (colorLoc !== undefined) {
       gl.enableVertexAttribArray(colorLoc);
-      gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        colorLoc,
+        4,
+        gl.FLOAT,
+        false,
+        stride,
+        2 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     // a_hovered (float)
     const hoveredLoc = shader.attributes.get('a_hovered');
     if (hoveredLoc !== undefined) {
       gl.enableVertexAttribArray(hoveredLoc);
-      gl.vertexAttribPointer(hoveredLoc, 1, gl.FLOAT, false, stride, 6 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        hoveredLoc,
+        1,
+        gl.FLOAT,
+        false,
+        stride,
+        6 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     // a_selected (float)
     const selectedLoc = shader.attributes.get('a_selected');
     if (selectedLoc !== undefined) {
       gl.enableVertexAttribArray(selectedLoc);
-      gl.vertexAttribPointer(selectedLoc, 1, gl.FLOAT, false, stride, 7 * Float32Array.BYTES_PER_ELEMENT);
+      gl.vertexAttribPointer(
+        selectedLoc,
+        1,
+        gl.FLOAT,
+        false,
+        stride,
+        7 * Float32Array.BYTES_PER_ELEMENT
+      );
     }
 
     // Activate shader

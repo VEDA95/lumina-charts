@@ -191,10 +191,7 @@ export class SelectionHandler extends BaseInteractionHandler {
     const maxY = Math.max(this.brushStart.y, event.dataY);
 
     // Find points in brush area
-    const points = spatialIndex.findInRect(
-      { minX, minY, maxX, maxY },
-      state.visibleSeries
-    );
+    const points = spatialIndex.findInRect({ minX, minY, maxX, maxY }, state.visibleSeries);
 
     const previousSelected = new Set(state.selectedPoints);
     const isMulti = this.isMultiSelectActive(event);
@@ -249,10 +246,7 @@ export class SelectionHandler extends BaseInteractionHandler {
     const state = this.chart.getState();
 
     // Find points in lasso polygon
-    const points = spatialIndex.findInPolygon(
-      this.lassoPoints,
-      state.visibleSeries
-    );
+    const points = spatialIndex.findInPolygon(this.lassoPoints, state.visibleSeries);
 
     const previousSelected = new Set(state.selectedPoints);
     const isMulti = this.isMultiSelectActive(event);

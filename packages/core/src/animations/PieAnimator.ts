@@ -102,7 +102,11 @@ export class PieAnimator {
   /**
    * Convert animated state to PieSlice array
    */
-  private toSlices(state: AnimatedSliceState[], selectedIndex: number | null, hoveredIndex: number | null): PieSlice[] {
+  private toSlices(
+    state: AnimatedSliceState[],
+    selectedIndex: number | null,
+    hoveredIndex: number | null
+  ): PieSlice[] {
     const slices: PieSlice[] = [];
     let currentAngle = this.startAngle;
 
@@ -140,7 +144,10 @@ export class PieAnimator {
   /**
    * Match old slices to new slices by label/dataIndex for smooth transitions
    */
-  private matchSlices(fromSlices: PieSlice[], toSlices: PieSlice[]): {
+  private matchSlices(
+    fromSlices: PieSlice[],
+    toSlices: PieSlice[]
+  ): {
     from: AnimatedSliceState[];
     to: AnimatedSliceState[];
   } {
@@ -196,7 +203,11 @@ export class PieAnimator {
   /**
    * Interpolate between two states
    */
-  private lerpState(from: AnimatedSliceState[], to: AnimatedSliceState[], t: number): AnimatedSliceState[] {
+  private lerpState(
+    from: AnimatedSliceState[],
+    to: AnimatedSliceState[],
+    t: number
+  ): AnimatedSliceState[] {
     return from.map((fromSlice, i) => {
       const toSlice = to[i];
       return {
