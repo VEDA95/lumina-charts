@@ -3,10 +3,10 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "composite": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "declaration": true,
+    "declarationMap": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"],
-  "references": [{ "path": "../core" }]
+  "include": ["src/**/*", "src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "*.config.ts"]
 }

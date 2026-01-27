@@ -1,0 +1,61 @@
+// Re-export all types from props
+export type {
+  BaseChartProps,
+  ScatterChartProps,
+  LineChartProps,
+  BarChartProps,
+  HistogramChartProps,
+  BubbleChartProps,
+  PieChartProps,
+  CandlestickChartProps,
+  BoxplotChartProps,
+  HeatmapChartProps,
+  NetworkChartProps,
+} from './props.js';
+
+// Re-export interaction types
+export type {
+  ZoomInteractionProps,
+  PanInteractionProps,
+  HoverInteractionProps,
+  SelectionInteractionProps,
+} from './interactions.js';
+
+// Re-export core types that users will need
+export type {
+  Series,
+  DataPoint,
+  SeriesStyle,
+  ChartOptions,
+  DataDomain,
+  Margins,
+  AxisConfig,
+  GridConfig,
+  ThemeConfig,
+  TooltipConfig,
+  LegendConfig,
+  HoverEvent,
+  ZoomEvent,
+  PanEvent,
+  SelectionEvent,
+  DataUpdateEvent,
+  ResizeEvent,
+  PointEvent,
+  ChartEvents,
+  HitTestResult,
+  RGBAColor,
+  ZoomHandlerConfig,
+  PanHandlerConfig,
+  HoverHandlerConfig,
+  SelectionHandlerConfig,
+  ScatterChartOptions,
+  LineChartOptions,
+  BarChartOptions,
+  HistogramChartOptions,
+  BubbleChartOptions,
+  PieChartOptions,
+  CandlestickChartOptions,
+  BoxplotChartOptions,
+  HeatmapChartOptions,
+  NetworkChartOptions,
+} from '@lumina-charts/core';
